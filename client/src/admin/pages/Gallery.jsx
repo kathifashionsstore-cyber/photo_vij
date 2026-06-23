@@ -1,395 +1,403 @@
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  collection, 
-  onSnapshot, 
-  query, 
-  where, 
-  orderBy, 
-  addDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp, 
-  getDocs 
+import { useEffect, useMemo, useState } from "react";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
-import { db, auth } from "../../firebase";
-import { 
-  Image as ImageIcon, 
-  Upload as UploadIcon, 
-  Trash2, 
-  ExternalLink, 
-  AlertCircle, 
-  CheckCircle 
+import {
+  Eye,
+  EyeOff,
+  Image as ImageIcon,
+  Loader2,
+  Plus,
+  RefreshCcw,
+  Save,
+  Trash2,
+  Upload,
 } from "lucide-react";
+import { auth, db } from "../../firebase";
+import { SERVICES, SERVICE_LABELS } from "../../data/services";
 
-// Inline helper components
-const BookingSelector = ({ value, onChange }) => {
-  const [bookings, setBookings] = useState([]);
-  
+const IMGBB_KEY = import.meta.env.VITE_IMGBB_API_KEY || "106aa1744e58f8a5770cb8b1dee136ad";
+
+const CATEGORY_OPTIONS = [
+  { id: "founder", label: "Founder" },
+  { id: "team", label: "Team" },
+  ...SERVICES.map((service) => ({ id: service.id, label: service.title })),
+];
+
+const DEFAULT_ALBUM = {
+  name: "",
+  category: "wedding",
+  description: "",
+  showInPublic: true,
+};
+
+const categoryLabel = (category) =>
+  CATEGORY_OPTIONS.find((item) => item.id === category)?.label || SERVICE_LABELS[category] || category || "Uncategorized";
+
+const describePhoto = (fileName, category) => {
+  const cleanName = fileName
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const label = categoryLabel(category);
+  const base = cleanName ? `${cleanName} from ${label}` : `${label} moment`;
+  return `${base} captured by Snaplica Photography with warm composition and event-focused detail.`;
+};
+
+const canvasToBlob = (canvas, quality) =>
+  new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+
+const compressImage = async (file) => {
+  const bitmap = await createImageBitmap(file);
+  const maxSide = 1600;
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close?.();
+
+  let quality = 0.82;
+  let blob = await canvasToBlob(canvas, quality);
+  while (blob && blob.size > 300 * 1024 && quality > 0.42) {
+    quality -= 0.08;
+    blob = await canvasToBlob(canvas, quality);
+  }
+
+  return new File([blob || file], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+};
+
+const uploadToImgBB = async (file) => {
+  const data = new FormData();
+  data.append("image", file);
+  const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+    method: "POST",
+    body: data,
+  });
+  const json = await response.json();
+  if (!json.success) throw new Error(json?.error?.message || "ImgBB upload failed");
+  return json.data;
+};
+
+export default function Gallery() {
+  const [albums, setAlbums] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [albumForm, setAlbumForm] = useState(DEFAULT_ALBUM);
+  const [selectedAlbumId, setSelectedAlbumId] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [draftDescriptions, setDraftDescriptions] = useState({});
+
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const snap = await getDocs(collection(db, "bookings"));
-        const list = [];
-        snap.forEach(d => {
-          const data = d.data();
-          if (data.status !== "cancelled") {
-            list.push({ id: d.id, ...data });
-          }
-        });
-        list.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
-        setBookings(list);
-      } catch (err) {
-        console.error("Failed to load bookings selector:", err);
-      }
+    const unsubscribeAlbums = onSnapshot(
+      query(collection(db, "albums"), orderBy("createdAt", "desc")),
+      (snap) => {
+        const list = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+        setAlbums(list);
+        setSelectedAlbumId((current) => current || list[0]?.id || "");
+      },
+      (err) => console.error("Albums listener failed:", err),
+    );
+
+    const unsubscribePhotos = onSnapshot(
+      query(collection(db, "gallery"), orderBy("createdAt", "desc")),
+      (snap) => setPhotos(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))),
+      (err) => console.error("Gallery listener failed:", err),
+    );
+
+    return () => {
+      unsubscribeAlbums();
+      unsubscribePhotos();
     };
-    fetchBookings();
   }, []);
 
-  return (
-    <div className="space-y-1.5 text-xs font-sans max-w-sm">
-      <label className="text-gray-500 uppercase tracking-wider font-semibold">Select Customer Event Gallery</label>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full bg-black/90 border border-white/5 rounded-xl px-4 py-3 text-xs outline-none text-white focus:border-brand-gold cursor-pointer"
-      >
-        <option value="">-- Choose Booking --</option>
-        {bookings.map(b => (
-          <option key={b.id} value={b.id}>
-            {b.clientName} - {b.eventType} ({b.eventDate})
-          </option>
-        ))}
-      </select>
-    </div>
+  const selectedAlbum = albums.find((album) => album.id === selectedAlbumId);
+  const visiblePhotos = useMemo(
+    () => photos.filter((photo) => photo.albumId === selectedAlbumId),
+    [photos, selectedAlbumId],
   );
-};
 
-const DropZone = ({ onFiles, uploading, progress }) => {
-  const [dragActive, setDragActive] = useState(false);
+  const saveAlbum = async (event) => {
+    event.preventDefault();
+    if (!albumForm.name.trim()) return;
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    const docRef = await addDoc(collection(db, "albums"), {
+      ...albumForm,
+      name: albumForm.name.trim(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      createdBy: auth.currentUser?.uid || "admin",
+    });
+    setSelectedAlbumId(docRef.id);
+    setAlbumForm(DEFAULT_ALBUM);
   };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onFiles(e.dataTransfer.files);
-    }
-  };
-
-  const handleChange = (e) => {
-    e.preventDefault();
-    if (e.target.files && e.target.files.length > 0) {
-      onFiles(e.target.files);
-    }
-  };
-
-  return (
-    <label 
-      onDragEnter={handleDrag}
-      onDragOver={handleDrag}
-      onDragLeave={handleDrag}
-      onDrop={handleDrop}
-      className={`border-2 border-dashed rounded-3xl flex flex-col items-center justify-center py-10 cursor-pointer transition-all bg-black/20 group relative overflow-hidden text-center p-6
-        ${dragActive ? "border-brand-gold bg-brand-gold/5" : "border-white/10 hover:border-brand-gold/40"}`}
-    >
-      {uploading ? (
-        <div className="flex flex-col items-center justify-center gap-3 w-full max-w-xs">
-          <div className="w-10 h-10 border-2 border-brand-gold border-t-transparent rounded-full animate-spin" />
-          <span className="text-[10px] text-brand-gold font-bold uppercase tracking-wider">
-            Uploading Assets to CDN ({progress}%)
-          </span>
-          <div className="w-full h-1 bg-black/45 rounded-full overflow-hidden">
-            <div className="h-full bg-brand-gold" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-      ) : (
-        <>
-          <UploadIcon className="w-8 h-8 text-gray-600 group-hover:text-brand-gold transition-colors mb-3" />
-          <span className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Drag & Drop or Click to Upload</span>
-          <span className="text-[9px] text-gray-600 mt-1">Accepts multiple images up to 10MB each</span>
-        </>
-      )}
-      <input 
-        type="file" 
-        multiple
-        disabled={uploading} 
-        onChange={handleChange} 
-        accept="image/*" 
-        className="hidden" 
-      />
-    </label>
-  );
-};
-
-const CATEGORIES = ["Wedding", "Pre-Wedding", "Birthday", "Corporate", "Events", "BTS"];
-
-export const Gallery = () => {
-  const [bookingId, setBookingId] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [photos, setPhotos] = useState([]);
-  const [publicMeta, setPublicMeta] = useState({
-    description: "",
-    category: "Wedding",
-    showInPublic: true,
-  });
-  
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
-
-  // REAL-TIME subscription to gallery photos
-  useEffect(() => {
-    if (!bookingId) {
-      setPhotos([]);
-      return;
-    }
-    const unsub = onSnapshot(
-      query(
-        collection(db, "galleries", bookingId, "photos"),
-        orderBy("uploadedAt", "desc")
-      ),
-      (snap) => {
-        setPhotos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      },
-      (err) => {
-        console.error("Gallery real-time query error:", err);
-      }
-    );
-    return unsub; // cleanup on unmount
-  }, [bookingId]);
 
   const uploadFiles = async (files) => {
-    if (!bookingId) return;
+    if (!selectedAlbum) {
+      setError("Create or select an album first.");
+      return;
+    }
+
     setUploading(true);
-    setErrorMsg("");
-    setSuccessMsg("");
-    const fileArray = Array.from(files);
+    setProgress(0);
+    setError("");
+    setMessage("");
+
+    const fileList = Array.from(files).filter((file) => file.type.startsWith("image/"));
     let done = 0;
 
-    for (const file of fileArray) {
-      try {
-        // Upload to ImgBB
-        const formData = new FormData();
-        formData.append("image", file);
-        const res = await fetch(
-          "https://api.imgbb.com/1/upload?key=106aa1744e58f8a5770cb8b1dee136ad",
-          { method: "POST", body: formData }
-        );
-        const json = await res.json();
-        
-        if (!json.success) {
-          console.error("ImgBB failed for:", file.name);
-          continue;
-        }
-
-        const photoPayload = {
+    try {
+      for (const file of fileList) {
+        const compressedFile = await compressImage(file);
+        const uploaded = await uploadToImgBB(compressedFile);
+        const description = describePhoto(file.name, selectedAlbum.category);
+        const payload = {
+          albumId: selectedAlbum.id,
+          albumName: selectedAlbum.name,
+          category: selectedAlbum.category,
+          serviceType: selectedAlbum.category,
+          description,
           fileName: file.name,
-          imageUrl: json.data.url,           // FULL resolution display URL
-          thumbUrl: json.data.thumb?.url || json.data.medium?.url || json.data.url, // thumbnail
-          deleteHash: json.data.delete_hash || "", // for deletion later
-          size: file.size,
-          type: file.type,
-          status: "raw",                     // raw | selected | editing | final
-          isSelected: false,
-          isFavorited: false,
-          isMustEdit: false,
-          description: publicMeta.description,
-          category: publicMeta.category,
-          showInPublic: publicMeta.showInPublic,
+          imageUrl: uploaded.url,
+          url: uploaded.url,
+          thumbUrl: uploaded.thumb?.url || uploaded.medium?.url || uploaded.url,
+          deleteHash: uploaded.delete_hash || "",
+          originalSize: file.size,
+          compressedSize: compressedFile.size,
+          showInPublic: Boolean(selectedAlbum.showInPublic),
+          status: selectedAlbum.showInPublic ? "public" : "hidden",
+          source: "admin_gallery",
           uploadedAt: serverTimestamp(),
-          uploadedBy: auth.currentUser?.uid || "admin"
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          uploadedBy: auth.currentUser?.uid || "admin",
         };
 
-        await addDoc(collection(db, "galleries", bookingId, "photos"), photoPayload);
+        const photoDoc = await addDoc(collection(db, "gallery"), payload);
+        await updateDoc(doc(db, "albums", selectedAlbum.id), {
+          coverUrl: selectedAlbum.coverUrl || uploaded.thumb?.url || uploaded.url,
+          updatedAt: serverTimestamp(),
+          lastPhotoId: photoDoc.id,
+        });
 
-        if (publicMeta.showInPublic) {
-          await addDoc(collection(db, "gallery"), {
-            ...photoPayload,
-            bookingId,
-            source: "admin_gallery",
-          });
-        }
-
-        done++;
-        setUploadProgress(Math.round((done / fileArray.length) * 100));
-      } catch (err) {
-        console.error("Upload error:", err);
+        done += 1;
+        setProgress(Math.round((done / fileList.length) * 100));
       }
-    }
 
-    setUploading(false);
-    setUploadProgress(0);
-    if (done > 0) {
-      setSuccessMsg(`${done} of ${fileArray.length} photos uploaded to gallery!`);
-    } else {
-      setErrorMsg("Failed to upload selected photos.");
+      setMessage(`${done} photo${done === 1 ? "" : "s"} uploaded.`);
+    } catch (err) {
+      console.error("Gallery upload failed:", err);
+      setError(err.message || "Upload failed.");
+    } finally {
+      setUploading(false);
+      setProgress(0);
     }
+  };
+
+  const updatePhoto = async (photoId, values) => {
+    await updateDoc(doc(db, "gallery", photoId), {
+      ...values,
+      updatedAt: serverTimestamp(),
+    });
+  };
+
+  const saveDescription = async (photo) => {
+    const description = draftDescriptions[photo.id] ?? photo.description ?? "";
+    await updatePhoto(photo.id, { description });
+    setDraftDescriptions((prev) => {
+      const next = { ...prev };
+      delete next[photo.id];
+      return next;
+    });
+  };
+
+  const regenerateDescription = async (photo) => {
+    await updatePhoto(photo.id, { description: describePhoto(photo.fileName || "Snaplica photo", photo.category) });
+  };
+
+  const togglePublic = async (photo) => {
+    const showInPublic = !photo.showInPublic;
+    await updatePhoto(photo.id, { showInPublic, status: showInPublic ? "public" : "hidden" });
   };
 
   const deletePhoto = async (photo) => {
-    if (!window.confirm("Are you sure you want to delete this photo from the gallery?")) return;
-    try {
-      await deleteDoc(doc(db, "galleries", bookingId, "photos", photo.id));
-      setSuccessMsg("Photo deleted from gallery.");
-      setTimeout(() => setSuccessMsg(""), 3000);
-    } catch (err) {
-      console.error("Delete photo error:", err);
-      setErrorMsg("Failed to remove photo.");
-    }
+    if (!window.confirm("Delete this gallery image?")) return;
+    await deleteDoc(doc(db, "gallery", photo.id));
   };
 
   return (
-    <div className="space-y-8 font-sans">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-serif font-bold text-white">Gallery Assets Manager</h1>
-        <p className="text-xs text-gray-500 mt-1 font-light">
-          Upload photos to ImgBB CDN and organize client review galleries.
-        </p>
+    <div className="space-y-7">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white md:text-3xl">Gallery Assets</h1>
+          <p className="mt-1 text-xs text-gray-500">Albums, ImgBB uploads, public visibility, and portfolio descriptions.</p>
+        </div>
+        <label className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-[8px] px-5 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${selectedAlbum ? "bg-brand-gold text-black hover:bg-amber-500" : "bg-white/10 text-gray-500"}`}>
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          Upload Images
+          <input type="file" accept="image/*" multiple disabled={!selectedAlbum || uploading} onChange={(e) => uploadFiles(e.target.files)} className="hidden" />
+        </label>
       </div>
 
-      <div className="bg-brand-card border border-white/5 rounded-3xl p-6 space-y-6 shadow-2xl max-w-4xl">
-        <BookingSelector value={bookingId} onChange={setBookingId} />
+      {(message || error || uploading) && (
+        <div className={`rounded-[8px] border p-4 text-sm ${error ? "border-red-500/30 bg-red-500/10 text-red-200" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"}`}>
+          {uploading ? `Uploading and compressing images (${progress}%)` : error || message}
+        </div>
+      )}
 
-        {errorMsg && (
-          <div className="p-3.5 bg-red-950/20 border border-red-900/40 text-red-400 text-xs rounded-xl flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="p-3.5 bg-emerald-950/20 border border-emerald-900/40 text-emerald-400 text-xs rounded-xl flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        {bookingId ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 rounded-2xl border border-white/5 bg-black/20 p-4 md:grid-cols-[1fr_180px_170px]">
-              <div className="space-y-1.5 text-xs">
-                <label className="font-semibold uppercase tracking-wider text-gray-500">Photo description</label>
-                <input
-                  value={publicMeta.description}
-                  onChange={(e) => setPublicMeta((prev) => ({ ...prev, description: e.target.value }))}
-                  placeholder="Shown on the public portfolio overlay"
-                  className="w-full rounded-xl border border-white/5 bg-black/40 px-4 py-3 text-xs text-white outline-none focus:border-brand-gold"
-                />
-              </div>
-              <div className="space-y-1.5 text-xs">
-                <label className="font-semibold uppercase tracking-wider text-gray-500">Category</label>
-                <select
-                  value={publicMeta.category}
-                  onChange={(e) => setPublicMeta((prev) => ({ ...prev, category: e.target.value }))}
-                  className="w-full rounded-xl border border-white/5 bg-black/90 px-4 py-3 text-xs text-white outline-none focus:border-brand-gold"
-                >
-                  {CATEGORIES.map((category) => <option key={category}>{category}</option>)}
-                </select>
-              </div>
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-white/5 bg-black/30 px-4 py-3 text-xs text-gray-400">
-                <input
-                  type="checkbox"
-                  checked={publicMeta.showInPublic}
-                  onChange={(e) => setPublicMeta((prev) => ({ ...prev, showInPublic: e.target.checked }))}
-                  className="h-4 w-4 accent-brand-gold"
-                />
-                Show on public website
-              </label>
-            </div>
-
-            {/* Drag & Drop Upload Zone */}
-            <DropZone onFiles={uploadFiles} uploading={uploading} progress={uploadProgress} />
-
-            {/* GALLERY GRID — subscribes to real-time Firestore */}
-            <div className="border-t border-white/5 pt-6">
-              <h3 className="text-white font-serif font-bold text-base flex items-center gap-1.5 mb-4">
-                <ImageIcon className="w-4 h-4 text-brand-gold" /> Uploaded Assets ({photos.length})
-              </h3>
-              
-              {photos.length === 0 && !uploading ? (
-                <div className="text-center py-20 text-white/20 border border-dashed border-white/5 rounded-2xl">
-                  <ImageIcon size={48} className="mx-auto mb-3 opacity-15" />
-                  <p className="text-xs">No photos uploaded yet for this booking</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {photos.map((photo, i) => (
-                    <motion.div
-                      key={photo.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.02, duration: 0.25 }}
-                      className="relative group aspect-square rounded-2xl overflow-hidden bg-white/5 border border-white/5 shadow-md"
-                    >
-                      {/* Use thumbUrl for grid display (fast loading) */}
-                      <img
-                        src={photo.thumbUrl || photo.imageUrl}
-                        alt={photo.fileName}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        onError={(e) => {
-                          e.target.src = photo.imageUrl;
-                        }}
-                      />
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3">
-                        <a 
-                          href={photo.imageUrl} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="text-[10px] uppercase font-bold tracking-wider text-black bg-brand-gold hover:bg-amber-500 px-3 py-1.5 rounded-xl w-full text-center flex items-center justify-center gap-1 transition-all"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" /> Full Size
-                        </a>
-                        <button
-                          onClick={() => deletePhoto(photo)}
-                          className="text-[10px] uppercase font-bold tracking-wider text-red-400 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded-xl w-full flex items-center justify-center gap-1 transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                        </button>
-                      </div>
-                      
-                      {/* Status badge */}
-                      <div className="absolute top-2 left-2">
-                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase font-mono
-                          ${photo.status === 'final' ? 'bg-emerald-500 text-black' :
-                            photo.status === 'editing' ? 'bg-purple-500 text-white' :
-                            photo.status === 'selected' ? 'bg-blue-500 text-white' :
-                            'bg-black/80 text-gray-400 border border-white/5'}`}>
-                          {photo.status}
-                        </span>
-                      </div>
-                      {photo.showInPublic && (
-                        <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-black/80 px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-brand-gold">
-                          Public - {photo.category}
-                        </div>
-                      )}
-                    </motion.div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
+        <aside className="space-y-5">
+          <form onSubmit={saveAlbum} className="rounded-[8px] border border-white/10 bg-brand-card p-5">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-white">
+              <Plus className="h-4 w-4 text-brand-gold" />
+              Create Album
+            </h2>
+            <div className="space-y-4">
+              <Field label="Album Name">
+                <input required value={albumForm.name} onChange={(e) => setAlbumForm((prev) => ({ ...prev, name: e.target.value }))} className={inputClass} placeholder="Wedding highlights" />
+              </Field>
+              <Field label="Category">
+                <select value={albumForm.category} onChange={(e) => setAlbumForm((prev) => ({ ...prev, category: e.target.value }))} className={inputClass}>
+                  {CATEGORY_OPTIONS.map((category) => (
+                    <option key={category.id} value={category.id}>{category.label}</option>
                   ))}
-                </div>
-              )}
+                </select>
+              </Field>
+              <Field label="Album Note">
+                <textarea value={albumForm.description} onChange={(e) => setAlbumForm((prev) => ({ ...prev, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Internal album context" />
+              </Field>
+              <label className="flex cursor-pointer items-center gap-3 rounded-[8px] border border-white/10 bg-black/30 p-3 text-xs text-gray-400">
+                <input type="checkbox" checked={albumForm.showInPublic} onChange={(e) => setAlbumForm((prev) => ({ ...prev, showInPublic: e.target.checked }))} className="h-4 w-4 accent-brand-gold" />
+                New uploads visible publicly
+              </label>
+              <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-4 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500">
+                <Save className="h-4 w-4" />
+                Save Album
+              </button>
+            </div>
+          </form>
+
+          <div className="rounded-[8px] border border-white/10 bg-brand-card p-4">
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-400">Albums</h2>
+            <div className="space-y-2">
+              {albums.length === 0 && <p className="rounded-[8px] border border-dashed border-white/10 p-6 text-center text-xs text-gray-600">No albums yet.</p>}
+              {albums.map((album) => {
+                const count = photos.filter((photo) => photo.albumId === album.id).length;
+                return (
+                  <button
+                    key={album.id}
+                    type="button"
+                    onClick={() => setSelectedAlbumId(album.id)}
+                    className={`flex w-full items-center gap-3 rounded-[8px] border p-3 text-left transition-colors ${
+                      selectedAlbumId === album.id ? "border-brand-gold bg-brand-gold/10" : "border-white/10 bg-black/20 hover:border-white/20"
+                    }`}
+                  >
+                    <div className="h-12 w-12 overflow-hidden rounded-[8px] bg-black/40">
+                      {album.coverUrl ? <img src={album.coverUrl} alt={album.name} className="h-full w-full object-cover" /> : <ImageIcon className="m-3 h-6 w-6 text-gray-600" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold text-white">{album.name}</p>
+                      <p className="mt-1 text-[11px] text-gray-500">{categoryLabel(album.category)} · {count} photos</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
-        ) : (
-          <div className="text-center py-20 text-white/20 border border-dashed border-white/5 rounded-3xl">
-            <ImageIcon size={48} className="mx-auto mb-3 opacity-15" />
-            <p className="text-xs">Choose a customer event booking to begin managing gallery assets.</p>
+        </aside>
+
+        <main className="rounded-[8px] border border-white/10 bg-brand-card p-5">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white">{selectedAlbum?.name || "Select an album"}</h2>
+              <p className="mt-1 text-xs text-gray-500">{selectedAlbum ? categoryLabel(selectedAlbum.category) : "Create an album to start uploading."}</p>
+            </div>
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-500">{visiblePhotos.length} images</span>
           </div>
-        )}
+
+          {selectedAlbum && visiblePhotos.length === 0 && (
+            <label className="flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/15 bg-black/20 p-8 text-center">
+              <Upload className="mb-4 h-10 w-10 text-brand-gold" />
+              <p className="text-sm font-bold text-white">Upload images into this album</p>
+              <p className="mt-2 max-w-md text-xs leading-6 text-gray-500">Images are compressed close to 300KB before uploading to ImgBB.</p>
+              <input type="file" accept="image/*" multiple disabled={uploading} onChange={(e) => uploadFiles(e.target.files)} className="hidden" />
+            </label>
+          )}
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {visiblePhotos.map((photo) => (
+              <article key={photo.id} className="overflow-hidden rounded-[8px] border border-white/10 bg-black/25">
+                <img src={photo.thumbUrl || photo.imageUrl} alt={photo.description || photo.fileName} className="aspect-[4/3] w-full object-cover" />
+                <div className="space-y-3 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${photo.showInPublic ? "bg-emerald-500/10 text-emerald-300" : "bg-white/10 text-gray-400"}`}>
+                      {photo.showInPublic ? "Public" : "Hidden"}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider text-gray-600">{categoryLabel(photo.category)}</span>
+                  </div>
+
+                  <textarea
+                    value={draftDescriptions[photo.id] ?? photo.description ?? ""}
+                    onChange={(e) => setDraftDescriptions((prev) => ({ ...prev, [photo.id]: e.target.value }))}
+                    onBlur={() => saveDescription(photo)}
+                    rows={3}
+                    className={`${inputClass} resize-none text-xs leading-5`}
+                  />
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button onClick={() => regenerateDescription(photo)} className={iconAction("#60a5fa")} title="Regenerate description">
+                      <RefreshCcw className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => togglePublic(photo)} className={iconAction(photo.showInPublic ? "#f59e0b" : "#22c55e")} title={photo.showInPublic ? "Hide image" : "Show image"}>
+                      {photo.showInPublic ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                    <button onClick={() => deletePhoto(photo)} className={iconAction("#ef4444")} title="Delete image">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </main>
       </div>
     </div>
   );
-};
+}
 
-export default Gallery;
+const Field = ({ label, children }) => (
+  <label className="block">
+    <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</span>
+    {children}
+  </label>
+);
+
+const inputClass =
+  "w-full rounded-[8px] border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-brand-gold";
+
+const iconAction = (color) =>
+  ({
+    color,
+    border: `1px solid ${color}33`,
+    background: `${color}14`,
+    borderRadius: 8,
+    padding: "10px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+  });

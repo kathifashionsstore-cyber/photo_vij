@@ -50,8 +50,8 @@ const searchBookings = async (q, tenantId) => {
   snap.forEach(doc => {
     const data = doc.data();
     const name = data.clientName || '';
-    const pkg = data.packageName || '';
-    if (name.toLowerCase().includes(q) || pkg.toLowerCase().includes(q)) {
+    const service = data.serviceType || data.eventType || '';
+    if (name.toLowerCase().includes(q) || service.toLowerCase().includes(q)) {
       results.push({ id: doc.id, ...data });
     }
   });
@@ -110,13 +110,13 @@ const getMockSearchResults = (q) => {
   ].filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q));
 
   const mockBookings = [
-    { id: "b1", clientName: "Rahul Verma", packageName: "Royal Wedding Package", eventDate: "2026-07-15", status: "pending" },
-    { id: "b2", clientName: "Harini Chawla", packageName: "Pre-Wedding Cinematic", eventDate: "2026-08-20", status: "approved" }
-  ].filter(b => b.clientName.toLowerCase().includes(q) || b.packageName.toLowerCase().includes(q));
+    { id: "b1", clientName: "Rahul Verma", serviceType: "wedding", eventDate: "2026-07-15", status: "pending" },
+    { id: "b2", clientName: "Harini Chawla", serviceType: "pre-wedding", eventDate: "2026-08-20", status: "approved" }
+  ].filter(b => b.clientName.toLowerCase().includes(q) || b.serviceType.toLowerCase().includes(q));
 
   const mockInvoices = [
-    { id: "i1", invoiceNumber: "INV-2026-001", clientName: "Rahul Verma", amount: 150000, status: "pending" },
-    { id: "i2", invoiceNumber: "INV-2026-002", clientName: "Harini Chawla", amount: 35000, status: "paid" }
+    { id: "i1", invoiceNumber: "INV-2026-001", clientName: "Rahul Verma", status: "pending" },
+    { id: "i2", invoiceNumber: "INV-2026-002", clientName: "Harini Chawla", status: "ready" }
   ].filter(i => i.invoiceNumber.toLowerCase().includes(q) || i.clientName.toLowerCase().includes(q));
 
   const mockTeams = [

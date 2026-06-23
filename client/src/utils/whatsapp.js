@@ -1,3 +1,5 @@
+import { getServiceById } from "../data/services";
+
 const ADMIN_PHONE = "9494387387";
 
 export const normalizePhone = (phone = "") => {
@@ -31,6 +33,12 @@ const serviceList = (servicesNeeded = []) => {
   return servicesNeeded.join(", ");
 };
 
+const normalizeService = (booking = {}) => {
+  const value = booking.serviceType || booking.eventType || booking.category || "";
+  const slug = String(value).trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return getServiceById(slug)?.title || value || "Photo Shoot";
+};
+
 export const buildAdminNewBookingWhatsApp = (booking) => {
   const message = `NEW BOOKING REQUEST - SNAPLICA
 
@@ -41,13 +49,12 @@ Phone: ${booking.clientPhone || booking.phone || ""}
 Email: ${booking.clientEmail || booking.email || ""}
 City: ${booking.clientCity || ""}
 
-Event Type: ${booking.eventType || ""}
+Service Type: ${normalizeService(booking)}
 Date: ${formatDate(booking.eventDate)}
 Time: ${booking.eventTime || ""}
 Venue: ${booking.venue || booking.venueAddress || ""}
 Duration: ${booking.duration || ""}
 
-Package Interest: ${booking.packageInterest || booking.package || ""}
 Services: ${serviceList(booking.servicesNeeded)}
 Guests: ${booking.guestCount ? `~${booking.guestCount}` : "Not specified"}
 Special Notes: ${booking.specialRequirements || booking.specialNotes || booking.comments || "None"}
@@ -66,11 +73,11 @@ export const buildClientInquiryWhatsApp = (booking) => {
 Thank you for your booking inquiry with Snaplica Photography.
 
 Your Ref: ${booking.bookingRef || "Pending"}
-Event: ${booking.eventType || ""}
+Service Type: ${normalizeService(booking)}
 Date: ${formatDate(booking.eventDate)}
 Venue: ${booking.venue || booking.venueAddress || ""}
 
-We have received your request and our team will contact you within 24 hours to confirm availability and discuss packages.
+We have received your request and our team will contact you within 24 hours to confirm availability and scheduling.
 
 For urgent queries call: ${ADMIN_PHONE}
 
@@ -89,13 +96,12 @@ export const buildTeamAssignmentWhatsApp = (teamLeaderPhone, booking) => {
 
 Hi ${booking.teamLeaderName || "Team Leader"}!
 
-Event: ${booking.eventType || "Photo Shoot"}
+Service Type: ${normalizeService(booking)}
 Client: ${booking.clientName || ""}
 Client Phone: ${booking.clientPhone || booking.phone || ""}
 Date: ${formatDate(booking.eventDate)}
 Time: ${booking.eventTime || ""}
 Venue: ${venue}
-Package: ${booking.packageInterest || booking.package || booking.packageName || ""}
 Notes: ${booking.specialRequirements || booking.specialNotes || booking.comments || "None"}
 
 Location on Maps:
@@ -107,7 +113,7 @@ Please confirm availability by replying yes.
   return whatsappUrl(teamLeaderPhone, message);
 };
 
-export const buildPaymentReminderWhatsApp = (clientPhone, clientName, amount, eventDate) => {
+export const buildBookingReminderWhatsApp = (clientPhone, clientName, _legacyValue, eventDate) => {
   const message = `Hi ${clientName}!
 
 This is a reminder from Snaplica Photography.
@@ -159,11 +165,11 @@ For help: ${ADMIN_PHONE}
 export const buildClientFollowUpWhatsApp = (booking) => {
   const message = `Hi ${booking.clientName || "there"}! Snaplica Photography here.
 
-We are following up on your ${booking.eventType || "event"} inquiry for ${formatDate(booking.eventDate)}.
+We are following up on your ${normalizeService(booking)} inquiry for ${formatDate(booking.eventDate)}.
 
 Your booking ref: ${booking.bookingRef || booking.id || ""}
 
-Please let us know a good time to discuss availability and package details.
+Please let us know a good time to discuss availability and scheduling details.
 - Snaplica Photography`;
 
   return whatsappUrl(booking.clientPhone || booking.phone, message);

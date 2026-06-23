@@ -1,4 +1,5 @@
 import { useMemo, useRef } from "react";
+import { getServiceById } from "../../data/services";
 
 const fmtD = (value) => {
   if (!value) return "-";
@@ -13,6 +14,12 @@ const row = (label, value) => (
     <span style={{ fontWeight: 700, color: "#111", textAlign: "right" }}>{value || "-"}</span>
   </div>
 );
+
+const serviceLabel = (booking = {}) => {
+  const value = booking.serviceType || booking.eventType || "";
+  const slug = String(value).trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return getServiceById(slug)?.title || value || "-";
+};
 
 export default function Receipt({ booking, onClose }) {
   const ref = useRef(null);
@@ -74,11 +81,10 @@ export default function Receipt({ booking, onClose }) {
 
             <Section title="Event Details">
               {[
-                ["Event Type", booking.eventType],
+                ["Service Type", serviceLabel(booking)],
                 ["Event Date", fmtD(booking.eventDate)],
                 ["Event Time", booking.eventTime || "-"],
                 ["Venue", booking.venue || booking.venueAddress || "-"],
-                ["Package", booking.package || booking.packageInterest || "-"],
                 ["Assigned Team", booking.assignedTeamName || "To be assigned"],
               ].map(([label, value]) => row(label, value))}
             </Section>

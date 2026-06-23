@@ -400,7 +400,7 @@ export default function Teams() {
 
       {showTeam && (
         <Modal title="New Team" onClose={() => setShowTeam(false)} width={620}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <Label>Team Name *</Label>
               <input value={teamForm.teamName} onChange={(e) => setTeamForm((prev) => ({ ...prev, teamName: e.target.value }))} placeholder="Team A" style={inputStyle} />
@@ -422,12 +422,12 @@ export default function Teams() {
           <div style={{ marginTop: 18 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 10 }}>
               <Label>Team Members</Label>
-              <button onClick={() => setMembers((prev) => [...prev, { ...EMPTY_MEMBER }])} style={miniGold}>
+              <button type="button" onClick={() => setMembers((prev) => [...prev, { ...EMPTY_MEMBER }])} style={miniGold}>
                 <Plus size={13} /> Add Member
               </button>
             </div>
             {members.map((member, index) => (
-              <div key={index} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 8, alignItems: "end", marginBottom: 8 }}>
+              <div key={index} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr)) auto", gap: 8, alignItems: "end", marginBottom: 8 }}>
                 <div>
                   <Label>Name</Label>
                   <input value={member.name} onChange={(e) => updateMember(index, "name", e.target.value, setMembers)} placeholder="Name" style={inputStyle} />
@@ -442,7 +442,7 @@ export default function Teams() {
                     {ROLES.map((role) => <option key={role}>{role}</option>)}
                   </select>
                 </div>
-                <button onClick={() => setMembers((prev) => prev.filter((_, i) => i !== index))} style={{ ...smallAction("#ef4444"), height: 40, padding: 10 }} title="Remove member">
+                <button type="button" onClick={() => setMembers((prev) => prev.filter((_, i) => i !== index))} style={{ ...smallAction("#ef4444"), height: 40, padding: 10 }} title="Remove member">
                   <X size={14} />
                 </button>
               </div>
@@ -450,15 +450,15 @@ export default function Teams() {
           </div>
 
           <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-            <button onClick={() => setShowTeam(false)} style={{ flex: 1, ...btnOutline }}>Cancel</button>
-            <button onClick={saveTeam} disabled={saving} style={{ flex: 2, ...btnGold }}>{saving ? "Saving..." : "Save Team"}</button>
+            <button type="button" onClick={() => setShowTeam(false)} style={{ flex: 1, ...btnOutline }}>Cancel</button>
+            <button type="button" onClick={saveTeam} disabled={saving} style={{ flex: 2, ...btnGold }}>{saving ? "Saving..." : "Save Team"}</button>
           </div>
         </Modal>
       )}
 
       {showAssign && (
         <Modal title="Assign Project" onClose={() => setShowAssign(false)} width={620}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <Label>Team *</Label>
               <select value={assignForm.teamId} onChange={(e) => setAssignForm((prev) => ({ ...prev, teamId: e.target.value }))} style={inputStyle}>
@@ -507,8 +507,8 @@ export default function Teams() {
           </div>
 
           <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-            <button onClick={() => setShowAssign(false)} style={{ flex: 1, ...btnOutline }}>Cancel</button>
-            <button onClick={saveAssignment} disabled={saving} style={{ flex: 2, ...btnGold }}>{saving ? "Assigning..." : "Assign & WhatsApp"}</button>
+            <button type="button" onClick={() => setShowAssign(false)} style={{ flex: 1, ...btnOutline }}>Cancel</button>
+            <button type="button" onClick={saveAssignment} disabled={saving} style={{ flex: 2, ...btnGold }}>{saving ? "Assigning..." : "Assign & WhatsApp"}</button>
           </div>
         </Modal>
       )}
@@ -574,6 +574,6 @@ const btnGold = { display: "inline-flex", alignItems: "center", justifyContent: 
 const btnOutline = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 18px", background: "transparent", color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer" };
 const miniGold = { display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(201,162,39,0.12)", border: "1px solid rgba(201,162,39,0.22)", color: gold, borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
 const smallAction = (color) => ({ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 10px", borderRadius: 9, border: `1px solid ${color}28`, background: `${color}14`, color, fontSize: 12, fontWeight: 800, cursor: "pointer" });
-const modalBackdrop = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 99000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
-const modalCard = { background: "#0f0f12", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: 28, width: "100%", maxHeight: "90vh", overflowY: "auto" };
+const modalBackdrop = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
+const modalCard = { background: "#0f0f12", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "clamp(16px,4vw,28px)", width: "100%", maxHeight: "90vh", overflowY: "auto", boxSizing: "border-box" };
 const iconButton = { background: "transparent", border: "none", color: "rgba(255,255,255,0.45)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" };

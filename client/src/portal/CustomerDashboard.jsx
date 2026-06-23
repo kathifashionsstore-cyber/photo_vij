@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Download, Eye, FileText, CheckCircle, Clock } from 'lucide-react';
+import { Calendar, Download, Eye, CheckCircle, Clock } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import SEOHead from '../components/SEOHead';
@@ -7,7 +7,6 @@ import SEOHead from '../components/SEOHead';
 export const CustomerDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [booking, setBooking] = useState(null);
-  const [invoices, setInvoices] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,16 +18,12 @@ export const CustomerDashboard = () => {
         // Set mock data as default for local workspace builds
         setBooking({
           clientName: "Rahul Verma",
-          packageName: "Royal Wedding Package",
+          serviceType: "Wedding Photography",
           eventDate: "2026-07-15",
           venueAddress: "A-Convention Hall, Vijayawada",
           status: "approved",
           photoStatus: "editing" // uploading, editing, delivered
         });
-
-        setInvoices([
-          { id: "inv-1", invoiceNumber: "INV-2026-001", clientName: "Rahul Verma", packageName: "Royal Wedding Package", amount: 150000, advancePaid: 45000, status: "partial", createdAt: "2026-06-10" }
-        ]);
 
         setPhotos([
           { id: 1, url: "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=600", tag: "Ceremonies" },
@@ -58,7 +53,7 @@ export const CustomerDashboard = () => {
     <div className="min-h-screen bg-brand-dark pt-24 pb-20 font-sans">
       <SEOHead 
         title="Customer Dashboard" 
-        description="View your booking progress, select client photos for photobooks, and pay invoices in the Snaplica customer portal." 
+        description="View your booking progress, select client photos for photobooks, and track delivery in the Snaplica customer portal." 
       />
 
       <div className="max-w-7xl mx-auto px-6 md:px-12">
@@ -74,7 +69,7 @@ export const CustomerDashboard = () => {
                 Welcome, {booking?.clientName || "Valued Client"}
               </h1>
               <p className="text-gray-500 text-xs mt-1 font-light leading-relaxed">
-                Log coordinates, review final album sheets, and process payments securely.
+                Log coordinates, review final album sheets, and track delivery progress.
               </p>
             </div>
           </div>
@@ -95,11 +90,11 @@ export const CustomerDashboard = () => {
               Photos ({photos.length})
             </button>
             <button 
-              onClick={() => setActiveTab("billing")}
+              onClick={() => setActiveTab("delivery")}
               className={`px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all
-                ${activeTab === 'billing' ? 'bg-brand-gold text-black' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                ${activeTab === 'delivery' ? 'bg-brand-gold text-black' : 'bg-white/5 text-gray-400 hover:text-white'}`}
             >
-              Billing
+              Delivery
             </button>
           </div>
         </div>
@@ -116,8 +111,8 @@ export const CustomerDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
-                    <span className="text-gray-500 block uppercase tracking-wider font-semibold">Package Name</span>
-                    <span className="text-white font-medium">{booking?.packageName}</span>
+                    <span className="text-gray-500 block uppercase tracking-wider font-semibold">Service Type</span>
+                    <span className="text-white font-medium">{booking?.serviceType}</span>
                   </div>
                   <div>
                     <span className="text-gray-500 block uppercase tracking-wider font-semibold">Shoot Date</span>
@@ -212,48 +207,23 @@ export const CustomerDashboard = () => {
           </div>
         )}
 
-        {/* Billing Tab */}
-        {activeTab === "billing" && (
+        {/* Delivery Tab */}
+        {activeTab === "delivery" && (
           <div className="space-y-6">
             <div className="border-b border-white/5 pb-4">
-              <h3 className="text-white font-serif font-bold text-xl">Billing & Invoices</h3>
-              <p className="text-gray-500 text-xs mt-0.5 font-light">Process pending advances or trace your historic payment receipts.</p>
+              <h3 className="text-white font-serif font-bold text-xl">Delivery Notes</h3>
+              <p className="text-gray-500 text-xs mt-0.5 font-light">Track files, selections, and album progress from the Snaplica team.</p>
             </div>
 
-            <div className="glass-card rounded-2xl border border-white/5 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-black/20 text-gray-500 uppercase tracking-wider font-semibold border-b border-white/5">
-                      <th className="px-6 py-4">Invoice No</th>
-                      <th className="px-6 py-4">Package</th>
-                      <th className="px-6 py-4">Total Amount</th>
-                      <th className="px-6 py-4">Advance Paid</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {invoices.map((inv) => (
-                      <tr key={inv.id} className="hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4 font-serif font-bold text-white">{inv.invoiceNumber}</td>
-                        <td className="px-6 py-4 text-gray-300">{inv.packageName}</td>
-                        <td className="px-6 py-4 text-white font-medium">₹{inv.amount.toLocaleString('en-IN')}</td>
-                        <td className="px-6 py-4 text-white font-medium">₹{inv.advancePaid.toLocaleString('en-IN')}</td>
-                        <td className="px-6 py-4">
-                          <span className="px-2.5 py-1 bg-amber-500/10 text-brand-gold border border-brand-gold/20 rounded-full text-[9px] uppercase tracking-wider font-bold">
-                            {inv.status === 'partial' ? 'Partial Paid' : inv.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold text-brand-gold hover:text-white transition-colors bg-white/5 border border-white/5 hover:border-white/10 px-3 py-1.5 rounded-lg">
-                            <FileText className="w-3.5 h-3.5" /> View Receipt
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="glass-card rounded-2xl border border-white/5 p-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                {["Selection gallery", "Editing queue", "Final delivery"].map((item, index) => (
+                  <div key={item} className="rounded-xl border border-white/5 bg-black/20 p-4">
+                    <span className="text-[10px] uppercase tracking-wider text-brand-gold">Step {index + 1}</span>
+                    <h4 className="mt-2 text-sm font-bold text-white">{item}</h4>
+                    <p className="mt-2 text-xs leading-5 text-gray-500">Snaplica will update this step as your project moves forward.</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

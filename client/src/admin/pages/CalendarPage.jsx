@@ -23,20 +23,18 @@ import {
   MapPin, 
   Calendar as CalendarIcon, 
   ArrowRight,
-  ExternalLink,
-  DollarSign
+  ExternalLink
 } from "lucide-react";
 import AssignTeamModal from "../../components/admin/AssignTeamModal";
 import { 
   buildClientConfirmationWhatsApp, 
-  buildPaymentReminderWhatsApp,
   buildTeamAssignmentWhatsApp
 } from "../../utils/whatsapp";
 
 const STATUS_COLORS = {
   new_inquiry:     { bg: "#6366f1", border: "#4f46e5", text: "#fff", label: "New Inquiry" },
   contacted:       { bg: "#8b5cf6", border: "#7c3aed", text: "#fff", label: "Contacted" },
-  quotation_sent:  { bg: "#f59e0b", border: "#d97706", text: "#000", label: "Quote Sent" },
+  quotation_sent:  { bg: "#f59e0b", border: "#d97706", text: "#000", label: "Details Sent" },
   booked:          { bg: "#3b82f6", border: "#2563eb", text: "#fff", label: "Booked" },
   assigned:        { bg: "#06b6d4", border: "#0891b2", text: "#000", label: "Assigned" },
   in_progress:     { bg: "#f97316", border: "#ea580c", text: "#fff", label: "In Progress" },
@@ -44,7 +42,7 @@ const STATUS_COLORS = {
   editing:         { bg: "#a855f7", border: "#9333ea", text: "#fff", label: "Editing" },
   delivered:       { bg: "#10b981", border: "#059669", text: "#fff", label: "Delivered" },
   cancelled:       { bg: "#6b7280", border: "#4b5563", text: "#fff", label: "Cancelled" },
-  payment_pending: { bg: "#ef4444", border: "#dc2626", text: "#fff", label: "Payment Due" }
+  pending_details: { bg: "#ef4444", border: "#dc2626", text: "#fff", label: "Details Needed" }
 };
 
 const WAIcon = ({ size = 14 }) => (
@@ -334,7 +332,7 @@ export const Calendar = () => {
 
               <div className="border-t border-white/5 pt-4 space-y-2">
                 <h4 className="text-[10px] uppercase font-bold tracking-widest text-gray-500">
-                  Status & Payments
+                  Status & Schedule
                 </h4>
                 <div className="flex gap-2 items-center text-xs">
                   <span className="text-gray-500">Pipeline Status:</span>
@@ -348,35 +346,6 @@ export const Calendar = () => {
                     ))}
                   </select>
                 </div>
-                
-                {selectedEvent.packagePrice && (
-                  <div className="bg-black/35 rounded-2xl p-3 space-y-1.5 text-xs border border-white/5">
-                    <div className="flex justify-between items-center text-gray-400">
-                      <span>Total Quote:</span>
-                      <span className="text-white font-mono">₹{Number(selectedEvent.packagePrice).toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-gray-400">
-                      <span>Received:</span>
-                      <span className="text-emerald-400 font-mono">₹{Number(selectedEvent.advancePaid || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between items-center border-t border-white/5 pt-1.5 text-white font-semibold">
-                      <span>Balance Due:</span>
-                      <span className="text-brand-gold font-mono">₹{Number(selectedEvent.packagePrice - (selectedEvent.advancePaid || 0)).toLocaleString('en-IN')}</span>
-                    </div>
-                    {selectedEvent.packagePrice > (selectedEvent.advancePaid || 0) && (
-                      <button 
-                        onClick={() => {
-                          const due = selectedEvent.packagePrice - (selectedEvent.advancePaid || 0);
-                          const waUrl = buildPaymentReminderWhatsApp(selectedEvent.phone, selectedEvent.clientName, due, selectedEvent.eventDate);
-                          window.open(waUrl, "_blank");
-                        }}
-                        className="w-full mt-2 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
-                      >
-                        <DollarSign className="w-3 h-3" /> WhatsApp Payment Reminder
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           ) : (

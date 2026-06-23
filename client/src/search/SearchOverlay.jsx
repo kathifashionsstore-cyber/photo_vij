@@ -150,7 +150,7 @@ const SearchResultsGroup = ({ title, icon: Icon, results, query }) => {
                 <HighlightMatch text={res.name || res.clientName || res.invoiceNumber || res.leader || ""} query={query} />
               </h4>
               <p className="text-xs text-gray-500 font-sans font-light">
-                {res.packageName || res.phone || res.email || `Amount: ₹${res.amount || 0}` || res.model || res.status}
+                {res.serviceType || res.eventType || res.phone || res.email || res.model || res.status}
               </p>
             </div>
             {res.status && (

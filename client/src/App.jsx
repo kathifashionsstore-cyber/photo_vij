@@ -8,6 +8,7 @@ import Footer from "./components/layout/Footer";
 import MobileBottomNav from "./components/layout/MobileBottomNav";
 import AnnouncementTicker from "./components/layout/AnnouncementTicker";
 import FestivalBannerModal from "./components/layout/FestivalBannerModal";
+import InstallAppBanner from "./components/layout/InstallAppBanner";
 import { LeftSocialBar, RightSocialBar } from "./components/layout/FloatingSocialBar";
 import { NAVBAR_HEIGHT } from "./components/layout/layoutConstants";
 import ChatbotWidget from "./chatbot/ChatbotWidget";
@@ -23,6 +24,7 @@ import { useEffect, useState } from "react";
 const Home      = lazy(() => import("./pages/Home"));
 const About     = lazy(() => import("./pages/About"));
 const Services  = lazy(() => import("./pages/Services"));
+const ServiceDetail = lazy(() => import("./pages/ServiceDetail"));
 const Portfolio = lazy(() => import("./pages/Portfolio"));
 const Booking   = lazy(() => import("./pages/Booking"));   // PUBLIC booking FORM
 const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
@@ -82,6 +84,7 @@ const PublicLayout = ({ children }) => {
       <LeftSocialBar />
       <RightSocialBar />
       <FestivalBannerModal />
+      <InstallAppBanner />
       <MobileBottomNav />
       <ChatbotWidget />
       {isSearchOpen && <SearchOverlay onClose={() => setIsSearchOpen(false)} />}
@@ -133,6 +136,7 @@ function AppContent() {
         <Route path="/"          element={<PublicLayout><Home /></PublicLayout>} />
         <Route path="/about"     element={<PublicLayout><About /></PublicLayout>} />
         <Route path="/services"  element={<PublicLayout><Services /></PublicLayout>} />
+        <Route path="/services/:serviceId" element={<PublicLayout><ServiceDetail /></PublicLayout>} />
         <Route path="/portfolio" element={<PublicLayout><Portfolio /></PublicLayout>} />
         <Route path="/booking"   element={<PublicLayout><Booking /></PublicLayout>} />
         <Route path="/booking/success" element={<PublicLayout><BookingSuccess /></PublicLayout>} />

@@ -78,7 +78,7 @@ export const Contact = () => {
                 We'd Love to Hear From You
               </h2>
               <p className="text-gray-500 text-sm font-light mt-4 leading-relaxed">
-                Have questions about packages, availability, or customizable photobooks? Complete the form, or reach out directly to Sonu to coordinate dates.
+                Have questions about services, availability, or customizable photobooks? Complete the form, or reach out directly to Sonu to coordinate dates.
               </p>
             </div>
 

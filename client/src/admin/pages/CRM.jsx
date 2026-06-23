@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { buildClientFollowUpWhatsApp, formatDate, normalizePhone } from "../../utils/whatsapp";
+import { SERVICES, getServiceById } from "../../data/services";
 
 const gold = "#c9a227";
 
@@ -53,15 +54,15 @@ const STATUS_ALIASES = {
   in_progress: "assigned",
 };
 
-const EVENT_TYPES = ["Wedding", "Pre-Wedding", "Birthday", "Corporate", "Product Shoot", "Other"];
+const EVENT_TYPES = SERVICES.map((service) => ({ value: service.id, label: service.title }));
 const EMPTY = {
   clientName: "",
   phone: "",
   email: "",
-  eventType: "Wedding",
+  eventType: "wedding",
+  serviceType: "wedding",
   eventDate: "",
   venue: "",
-  package: "Premium",
   priority: "normal",
   notes: "",
   status: "new_inquiry",
@@ -86,6 +87,12 @@ const daysUntil = (dateStr) => {
 };
 
 const eventInitial = (eventType = "Event") => eventType.slice(0, 1).toUpperCase();
+const normalizeServiceType = (item = {}) => {
+  const value = item.serviceType || item.eventType || "";
+  const slug = String(value).trim().toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return getServiceById(slug)?.id || value || "wedding";
+};
+const serviceLabel = (item = {}) => getServiceById(normalizeServiceType(item))?.title || item.serviceType || item.eventType || "Service";
 
 export default function CRM() {
   const [leadDocs, setLeadDocs] = useState([]);
@@ -135,6 +142,8 @@ export default function CRM() {
       await addDoc(collection(db, "leads"), {
         ...form,
         phone: normalizePhone(form.phone),
+        eventType: normalizeServiceType(form),
+        serviceType: normalizeServiceType(form),
         status: normalizeStatus(form.status),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -256,10 +265,10 @@ export default function CRM() {
                 <input {...inp("email")} placeholder="client@email.com" />
               </div>
               <div>
-                <Label>Event Type</Label>
-                <select value={form.eventType} onChange={(e) => setForm((prev) => ({ ...prev, eventType: e.target.value }))} style={iStyle}>
+                <Label>Service Type</Label>
+                <select value={form.serviceType || form.eventType} onChange={(e) => setForm((prev) => ({ ...prev, eventType: e.target.value, serviceType: e.target.value }))} style={iStyle}>
                   {EVENT_TYPES.map((type) => (
-                    <option key={type}>{type}</option>
+                    <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
                 </select>
               </div>
@@ -270,10 +279,6 @@ export default function CRM() {
               <div style={{ gridColumn: "1/-1" }}>
                 <Label>Venue</Label>
                 <input {...inp("venue")} placeholder="Taj Hotel, Vijayawada" />
-              </div>
-              <div>
-                <Label>Package</Label>
-                <input {...inp("package")} placeholder="Premium" />
               </div>
               <div style={{ gridColumn: "1/-1" }}>
                 <Label>Notes</Label>
@@ -299,7 +304,9 @@ const normalizeLead = (item, sourceCollection) => ({
   phone: normalizePhone(item.clientPhone || item.phone || item.clientPhoneNumber || ""),
   email: item.clientEmail || item.email || "",
   venue: item.venue || item.venueAddress || "",
-  package: item.packageInterest || item.package || item.packageName || "",
+  eventType: normalizeServiceType(item),
+  serviceType: normalizeServiceType(item),
+  serviceLabel: serviceLabel(item),
   notes: item.notes || item.specialRequirements || item.specialNotes || item.comments || "",
   priority: item.priority || "normal",
   teamName: item.assignedTeamName || item.teamName || "",
@@ -313,8 +320,8 @@ const LeadCard = ({ lead, onOpen, onMove }) => {
     <div style={leadCardStyle} onClick={onOpen}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 10, color: "#d1d5db", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-          <span style={eventBadge}>{eventInitial(lead.eventType)}</span>
-          {lead.eventType || "Event"}
+          <span style={eventBadge}>{eventInitial(lead.serviceLabel)}</span>
+          {lead.serviceLabel || "Service"}
         </span>
         {lead.priority === "vip" && <span style={vipBadge}>VIP</span>}
       </div>
@@ -333,7 +340,6 @@ const LeadCard = ({ lead, onOpen, onMove }) => {
         <span style={{ ...miniPill, color: meta.color, background: `${meta.color}16`, borderColor: `${meta.color}30` }}>
           {meta.label}
         </span>
-        {lead.package && <span style={miniPill}>{lead.package}</span>}
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
@@ -378,10 +384,9 @@ const LeadDrawer = ({ lead, onClose, onMove, onSetStage }) => (
       {[
         ["Phone", lead.phone || "Not added"],
         ["Email", lead.email || "Not added"],
-        ["Event", lead.eventType || "Not added"],
+        ["Service Type", lead.serviceLabel || "Not added"],
         ["Date", formatDate(lead.eventDate) || "Not added"],
         ["Venue", lead.venue || "Not added"],
-        ["Package", lead.package || "Not added"],
         ["Team", lead.teamName || "Unassigned"],
         ["Source", lead.source || lead.bookingSource || lead.sourceCollection],
         ["Notes", lead.notes || "No notes"],

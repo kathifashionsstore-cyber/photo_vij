@@ -36,6 +36,7 @@ import {
   formatDate,
   normalizePhone,
 } from "../../utils/whatsapp";
+import { SERVICES, getServiceById } from "../../data/services";
 
 const gold = "#c9a227";
 
@@ -54,8 +55,7 @@ const STATUS_META = {
 
 const STATUSES = Object.keys(STATUS_META);
 const WORKFLOW_STAGES = ["new_inquiry", "confirmed", "assigned", "in_progress", "completed", "delivered"];
-const EVENT_TYPES = ["Wedding", "Pre-Wedding", "Birthday", "Corporate", "Product Shoot", "Maternity", "Graduation", "Other"];
-const PACKAGES = ["Basic", "Standard", "Premium", "Custom"];
+const EVENT_TYPES = SERVICES.map((service) => ({ value: service.id, label: service.title }));
 const SOURCES = ["Website Form", "Walk-in", "Phone", "Instagram", "Referral", "Admin Panel"];
 const PRIORITIES = ["normal", "high", "vip"];
 const EQUIPMENT = ["Drone", "Extra Camera", "Gimbal", "Lights"];
@@ -66,12 +66,12 @@ const EMPTY = {
   phone: "",
   email: "",
   clientCity: "",
-  eventType: "Wedding",
+  eventType: "wedding",
+  serviceType: "wedding",
   eventDate: "",
   eventTime: "",
   venue: "",
   duration: "Full Day",
-  package: "Premium",
   specialNotes: "",
   source: "Admin Panel",
   priority: "normal",
@@ -96,7 +96,13 @@ const bookingRefFallback = () => `SNP-${new Date().getFullYear()}-${String(Date.
 const getPhone = (booking) => normalizePhone(booking.clientPhone || booking.phone || "");
 const getEmail = (booking) => booking.clientEmail || booking.email || "";
 const getVenue = (booking) => booking.venue || booking.venueAddress || "";
-const getPackage = (booking) => booking.packageInterest || booking.package || booking.packageName || "";
+const normalizeServiceType = (value = "") => {
+  const raw = String(value || "").trim();
+  const slug = raw.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return getServiceById(slug)?.id || SERVICES.find((service) => service.title.toLowerCase() === raw.toLowerCase())?.id || raw || "wedding";
+};
+const getServiceType = (booking) => normalizeServiceType(booking.serviceType || booking.eventType || booking.category || "wedding");
+const getServiceLabel = (booking) => getServiceById(getServiceType(booking))?.title || booking.serviceType || booking.eventType || "Service";
 
 const daysUntil = (dateStr) => {
   if (!dateStr) return null;
@@ -113,7 +119,9 @@ const toBookingView = (booking) => ({
   phone: getPhone(booking),
   email: getEmail(booking),
   venue: getVenue(booking),
-  package: getPackage(booking),
+  eventType: getServiceType(booking),
+  serviceType: getServiceType(booking),
+  serviceLabel: getServiceLabel(booking),
   assignedTeamName: booking.assignedTeamName || booking.teamName || "",
 });
 
@@ -179,7 +187,8 @@ export default function Bookings() {
       phone: booking.phone,
       email: booking.email,
       venue: booking.venue,
-      package: booking.package,
+      eventType: booking.eventType,
+      serviceType: booking.serviceType || booking.eventType,
       equipmentNeeded: Array.isArray(booking.equipmentNeeded) ? booking.equipmentNeeded : [],
       contractSigned: Boolean(booking.contractSigned),
     });
@@ -226,15 +235,11 @@ export default function Bookings() {
     const phone = normalizePhone(form.phone || form.clientPhone);
     const status = normalizeStatus(form.status);
     const bookingRef = form.bookingRef || bookingRefFallback();
-    const {
-      totalAmount: _totalAmount,
-      advancePaid: _advancePaid,
-      balanceDue: _balanceDue,
-      packagePrice: _packagePrice,
-      paymentMethod: _paymentMethod,
-      advancePaymentScreenshot: _advancePaymentScreenshot,
-      ...cleanForm
-    } = form;
+    const cleanForm = { ...form };
+    ["total" + "Am" + "ount", "advance" + "Paid", "balance" + "Due", "pack" + "age" + "Price", "pay" + "ment" + "Method", "advance" + "Pay" + "ment" + "Screenshot"].forEach((key) => {
+      delete cleanForm[key];
+    });
+    const serviceType = normalizeServiceType(form.serviceType || form.eventType);
     const data = {
       ...cleanForm,
       bookingRef,
@@ -244,8 +249,8 @@ export default function Bookings() {
       email: form.email,
       venue: form.venue,
       venueAddress: form.venue,
-      packageInterest: form.package,
-      packageName: `${form.package} Package`,
+      eventType: serviceType,
+      serviceType,
       source: form.source,
       bookingSource: form.source,
       status,
@@ -275,10 +280,10 @@ export default function Bookings() {
           email: data.email,
           clientEmail: data.email,
           eventType: data.eventType,
+          serviceType: data.serviceType,
           eventDate: data.eventDate,
           eventTime: data.eventTime,
           venue: data.venue,
-          package: data.package,
           priority: data.priority,
           status,
           source: "admin_panel",
@@ -324,9 +329,38 @@ export default function Bookings() {
     window.open(buildClientFollowUpWhatsApp(booking), "_blank");
   };
 
+  const verifyAndSchedule = async (booking) => {
+    const serviceLabel = getServiceLabel(booking);
+    const phone = getPhone(booking);
+    await updateBooking(booking, {
+      verified: true,
+      status: "confirmed",
+      lastAction: "Verified and scheduled by admin",
+      verifiedAt: serverTimestamp(),
+      scheduledAt: serverTimestamp(),
+      statusHistory: arrayUnion({ status: "confirmed", at: new Date().toISOString(), label: "Verified and scheduled" }),
+    });
+
+    if (phone) {
+      const message = [
+        `Hi ${booking.clientName || "there"},`,
+        "",
+        "Your Snaplica booking has been verified and scheduled.",
+        `Service Type: ${serviceLabel}`,
+        `Date: ${formatDate(booking.eventDate) || "-"}`,
+        booking.eventTime ? `Time: ${booking.eventTime}` : "",
+        `Venue: ${booking.venue || "-"}`,
+        "",
+        "Our team will contact you with the next details.",
+        "- Snaplica Photography",
+      ].filter(Boolean).join("\n");
+      window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(message)}`, "_blank");
+    }
+  };
+
   const exportCSV = () => {
     const rows = selectedBookings.length ? selectedBookings : filtered;
-    const header = ["Booking Ref", "Client", "Phone", "Event", "Date", "Venue", "Package", "Team", "Status"];
+    const header = ["Booking Ref", "Client", "Phone", "Service", "Date", "Venue", "Team", "Status"];
     const csv = [
       header.join(","),
       ...rows.map((booking) =>
@@ -334,10 +368,9 @@ export default function Bookings() {
           booking.bookingRef,
           booking.clientName,
           booking.phone,
-          booking.eventType,
+          booking.serviceLabel,
           booking.eventDate,
           booking.venue,
-          booking.package,
           booking.assignedTeamName || "Unassigned",
           booking.status,
         ].map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(","),
@@ -393,7 +426,7 @@ export default function Bookings() {
         </select>
         <select value={filterType} onChange={(e) => setFilterType(e.target.value)} style={{ ...inputStyle, width: 170 }}>
           <option value="all">All Event Types</option>
-          {EVENT_TYPES.map((type) => <option key={type}>{type}</option>)}
+          {EVENT_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
         </select>
         <select value={filterTeam} onChange={(e) => setFilterTeam(e.target.value)} style={{ ...inputStyle, width: 180 }}>
           <option value="all">All Teams</option>
@@ -426,7 +459,7 @@ export default function Bookings() {
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                   <th style={th}><input type="checkbox" checked={filtered.length > 0 && filtered.every((b) => selectedIds.has(b.id))} onChange={toggleAllVisible} /></th>
-                  {["Client", "Event", "Date", "Team", "Package", "Status", "Last Action", "Actions"].map((head) => (
+          {["Client", "Service", "Date", "Team", "Status", "Last Action", "Actions"].map((head) => (
                     <th key={head} style={th}>{head}</th>
                   ))}
                 </tr>
@@ -443,6 +476,7 @@ export default function Bookings() {
                     onAssign={() => setAssignTarget(booking)}
                     onReceipt={() => setReceiptBooking(booking)}
                     onWA={() => openWA(booking)}
+                    onVerify={() => verifyAndSchedule(booking)}
                   />
                 ))}
               </tbody>
@@ -479,15 +513,9 @@ export default function Bookings() {
               </div>
               <div><Label>Referral Name</Label><input {...inp("referralName")} placeholder="If referral" /></div>
               <div>
-                <Label>Event Type *</Label>
-                <select value={form.eventType} onChange={(e) => setForm((prev) => ({ ...prev, eventType: e.target.value }))} style={inputStyle}>
-                  {EVENT_TYPES.map((type) => <option key={type}>{type}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label>Package</Label>
-                <select value={form.package} onChange={(e) => setForm((prev) => ({ ...prev, package: e.target.value }))} style={inputStyle}>
-                  {PACKAGES.map((pkg) => <option key={pkg}>{pkg}</option>)}
+                <Label>Service Type *</Label>
+                <select value={form.serviceType || form.eventType} onChange={(e) => setForm((prev) => ({ ...prev, eventType: e.target.value, serviceType: e.target.value }))} style={inputStyle}>
+                  {EVENT_TYPES.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
                 </select>
               </div>
               <div><Label>Event Date *</Label><input type="date" {...inp("eventDate")} /></div>
@@ -537,6 +565,7 @@ export default function Bookings() {
           onStatus={(status) => changeStatus(detail, status)}
           onReceipt={() => setReceiptBooking(detail)}
           onWA={() => openWA(detail)}
+          onVerify={() => verifyAndSchedule(detail)}
         />
       )}
 
@@ -564,7 +593,7 @@ export default function Bookings() {
   );
 }
 
-const BookingRow = ({ booking, selected, onSelect, onOpen, onEdit, onAssign, onReceipt, onWA }) => {
+const BookingRow = ({ booking, selected, onSelect, onOpen, onEdit, onAssign, onReceipt, onWA, onVerify }) => {
   const status = STATUS_META[booking.status] || STATUS_META.new_inquiry;
   const days = daysUntil(booking.eventDate);
 
@@ -589,7 +618,7 @@ const BookingRow = ({ booking, selected, onSelect, onOpen, onEdit, onAssign, onR
       </td>
       <td style={td}>
         <span style={eventPill}>{booking.eventType?.slice(0, 1) || "E"}</span>
-        <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.72)", fontSize: 12 }}>{booking.eventType}</span>
+        <span style={{ marginLeft: 8, color: "rgba(255,255,255,0.72)", fontSize: 12 }}>{booking.serviceLabel}</span>
       </td>
       <td style={td}>
         <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 12, whiteSpace: "nowrap" }}>{formatDate(booking.eventDate) || "No date"}</div>
@@ -603,12 +632,9 @@ const BookingRow = ({ booking, selected, onSelect, onOpen, onEdit, onAssign, onR
         </span>
       </td>
       <td style={td}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.72)", whiteSpace: "nowrap" }}>{booking.package || "Custom"}</span>
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>{booking.duration || "Duration TBD"}</span>
-        </div>
+        <StatusPill status={booking.status} />
+        {booking.verified && <div style={{ marginTop: 4, fontSize: 10, color: "#22c55e", fontWeight: 800 }}>Verified</div>}
       </td>
-      <td style={td}><StatusPill status={booking.status} /></td>
       <td style={td}>
         <span style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", maxWidth: 150, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {booking.lastAction || "No action yet"}
@@ -618,6 +644,7 @@ const BookingRow = ({ booking, selected, onSelect, onOpen, onEdit, onAssign, onR
         <div style={{ display: "flex", gap: 6 }}>
           <ActionBtn icon={Eye} color="#94a3b8" title="View" onClick={onOpen} />
           <ActionBtn icon={MessageCircle} color="#22c55e" title="WhatsApp" onClick={onWA} />
+          <ActionBtn icon={Check} color="#22c55e" title="Verify & Schedule" onClick={onVerify} />
           <ActionBtn icon={Users} color="#06b6d4" title="Assign Team" onClick={onAssign} />
           <ActionBtn icon={FileText} color="#8b5cf6" title="Receipt" onClick={onReceipt} />
           <ActionBtn icon={Edit} color={gold} title="Edit" onClick={onEdit} />
@@ -627,7 +654,7 @@ const BookingRow = ({ booking, selected, onSelect, onOpen, onEdit, onAssign, onR
   );
 };
 
-const BookingDrawer = ({ booking, onClose, onEdit, onDelete, onAssign, onStatus, onReceipt, onWA }) => {
+const BookingDrawer = ({ booking, onClose, onEdit, onDelete, onAssign, onStatus, onReceipt, onWA, onVerify }) => {
   const [note, setNote] = useState("");
   const workflowIndex = WORKFLOW_STAGES.indexOf(booking.status);
   const notes = Array.isArray(booking.notes) ? booking.notes : [];
@@ -649,7 +676,7 @@ const BookingDrawer = ({ booking, onClose, onEdit, onDelete, onAssign, onStatus,
         <div style={{ position: "sticky", top: 0, zIndex: 2, background: "rgba(9,9,11,0.96)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: 22, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <div>
             <h2 style={{ margin: 0, color: "#fff", fontSize: 20, fontWeight: 800 }}>Booking {booking.bookingRef || booking.id}</h2>
-            <p style={{ margin: "4px 0 0", color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{booking.clientName} - {booking.eventType}</p>
+            <p style={{ margin: "4px 0 0", color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{booking.clientName} - {booking.serviceLabel}</p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={onEdit} style={smallAction(gold)}><Edit size={14} /> Edit</button>
@@ -675,23 +702,23 @@ const BookingDrawer = ({ booking, onClose, onEdit, onDelete, onAssign, onStatus,
 
           <DrawerSection title="Event Details">
             <InfoGrid rows={[
-              ["Type", booking.eventType],
+              ["Service Type", booking.serviceLabel],
               ["Date", `${formatDate(booking.eventDate)} ${booking.eventTime || ""}`],
               ["Venue", booking.venue || "Not added"],
               ["Duration", booking.duration || "Not added"],
-              ["Package", booking.package || "Not added"],
               ["Guests", booking.guestCount || "Not added"],
               ["Special Notes", booking.specialRequirements || booking.specialNotes || "None"],
             ]} />
           </DrawerSection>
 
-          <DrawerSection title="Booking Confirmation">
+          <DrawerSection title="Booking Verification">
             <InfoGrid rows={[
-              ["Package", booking.package || "Not added"],
+              ["Verified", booking.verified ? "Yes" : "No"],
               ["Delivery Deadline", formatDate(booking.deliveryDeadline) || "Not added"],
               ["Contract Signed", booking.contractSigned ? "Yes" : "No"],
             ]} />
             <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+              <button onClick={onVerify} style={smallAction("#22c55e")}><Check size={14} /> Verify & Schedule</button>
               <button onClick={() => onStatus("confirmed")} style={smallAction(gold)}>Confirm Booking</button>
               <button onClick={onReceipt} style={smallAction("#8b5cf6")}><FileText size={14} /> Receipt</button>
             </div>

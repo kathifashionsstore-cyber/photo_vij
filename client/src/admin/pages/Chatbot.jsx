@@ -4,7 +4,7 @@ import { Bot, Save, CheckCircle } from 'lucide-react';
 export const ChatbotKnowledge = () => {
   const [kb, setKb] = useState({
     location: "Snaplica Photography studio is located at Ibrahimpatnam, Vijayawada, Andhra Pradesh, India. You can view our coordinates on the Contact page.",
-    packages: "We offer flexible packages for events, birthdays, pre-weddings, weddings, corporate shoots, and product shoots. Ask clients for date, venue, and coverage needs before suggesting a package.",
+    services: "We cover weddings, events, birthdays, pre-weddings, corporate shoots, product shoots, portraits, drone coverage, and reels. Ask clients for date, venue, and coverage needs before suggesting a crew setup.",
     delivery: "We deliver RAW selection galleries to your Customer Portal within 4 days. Edited cinematic clips and printed albums are fully delivered within 3 to 4 weeks."
   });
   const [success, setSuccess] = useState(false);
@@ -47,11 +47,11 @@ export const ChatbotKnowledge = () => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-gray-500 uppercase tracking-wider">Packages description</label>
+            <label className="text-gray-500 uppercase tracking-wider">Services description</label>
             <textarea 
               required
-              value={kb.packages}
-              onChange={(e) => setKb(prev => ({ ...prev, packages: e.target.value }))}
+              value={kb.services}
+              onChange={(e) => setKb(prev => ({ ...prev, services: e.target.value }))}
               rows="3"
               className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 outline-none text-white focus:border-brand-gold resize-none"
             />

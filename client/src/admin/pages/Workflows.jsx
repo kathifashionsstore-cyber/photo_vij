@@ -76,7 +76,7 @@ export const WorkflowEngine = () => {
             
             <div className="p-4 bg-black/20 border border-white/5 rounded-xl space-y-3">
               <span className="text-[10px] text-brand-gold uppercase font-bold tracking-wider">Condition Guard</span>
-              <p className="text-white font-medium">If event type equals "Wedding" and a full team package is selected</p>
+              <p className="text-white font-medium">If service type equals "Wedding" and a full team is required</p>
             </div>
 
             <div className="p-4 bg-black/20 border border-white/5 rounded-xl space-y-3">

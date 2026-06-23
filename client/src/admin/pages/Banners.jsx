@@ -221,7 +221,7 @@ export const Banners = () => {
                   <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                     <p className="text-white text-xs">Click to change image</p>
                   </div>
-                  {/* Premium gold frame overlay */}
+                  {/* Gold frame overlay */}
                   <div className="absolute inset-0 border-4 border-[#c9a227]/30 pointer-events-none" />
                 </div>
               ) : (
@@ -244,7 +244,7 @@ export const Banners = () => {
             <label className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Banner Offer Title</label>
             <input
               type="text"
-              placeholder="e.g. Diwali Premium Shoot 20% Off"
+              placeholder="e.g. Diwali Wedding Shoot Offer"
               value={form.title}
               onChange={e => setForm(f => ({...f, title: e.target.value}))}
               className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 outline-none text-white text-xs focus:border-brand-gold"

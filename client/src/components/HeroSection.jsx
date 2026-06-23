@@ -29,7 +29,7 @@ const DEFAULT_HERO_CONFIG = {
   services: {
     heading: 'Photography Services for Every Occasion',
     subheading: 'Wedding, pre-wedding, birthday, corporate, product, portrait, and cinematic coverage.',
-    cta1Text: 'Explore Packages',
+    cta1Text: 'Explore Services',
     cta1Url: '/services',
     cta2Text: 'Book Now',
     cta2Url: '/booking',
@@ -52,7 +52,7 @@ const DEFAULT_HERO_CONFIG = {
   },
   booking: {
     heading: 'Book Your Dream Photo Session',
-    subheading: 'Share your date, venue, package interest, and creative requirements with our team.',
+    subheading: 'Share your date, venue, service type, and creative requirements with our team.',
     cta1Text: 'Start Booking',
     cta1Url: '#booking-form',
     cta2Text: 'View Services',
@@ -130,7 +130,7 @@ export const HeroSection = ({ pageId = 'home' }) => {
 
   return (
     <section
-      className="relative min-h-[540px] overflow-hidden bg-brand-dark"
+      className="relative min-h-[500px] overflow-hidden bg-brand-dark"
       style={{ height: `calc(100vh - ${PUBLIC_HEADER_HEIGHT}px)` }}
     >
       <motion.div style={{ y: backgroundY }} className="absolute inset-0 h-full w-full">

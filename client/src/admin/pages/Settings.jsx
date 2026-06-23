@@ -43,7 +43,7 @@ const HERO_DEFAULTS = {
   services: {
     heading: "Photography Services for Every Occasion",
     subheading: "Wedding, pre-wedding, birthday, corporate, product, portrait, and cinematic coverage.",
-    cta1Text: "Explore Packages",
+    cta1Text: "Explore Services",
     cta1Url: "/services",
     cta2Text: "Book Now",
     cta2Url: "/booking",
@@ -66,7 +66,7 @@ const HERO_DEFAULTS = {
   },
   booking: {
     heading: "Book Your Dream Photo Session",
-    subheading: "Share your date, venue, package interest, and creative requirements with our team.",
+    subheading: "Share your date, venue, service type, and creative requirements with our team.",
     cta1Text: "Start Booking",
     cta1Url: "#booking-form",
     cta2Text: "View Services",

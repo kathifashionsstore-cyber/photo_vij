@@ -10,7 +10,7 @@ export const ChatbotWidget = () => {
   const [inputValue, setInputValue] = useState("");
   const [suggestedQuestions, setSuggestedQuestions] = useState([
     "Where is the studio?",
-    "What packages do you offer?",
+    "What services do you offer?",
     "How do I book सोनू & crew?",
     "What is photo delivery time?"
   ]);
@@ -24,7 +24,7 @@ export const ChatbotWidget = () => {
 
   const knowledgeBase = {
     location: "Snaplica Photography studio is located at Ibrahimpatnam, Vijayawada, Andhra Pradesh, India. You can view our coordinates on the Contact page.",
-    packages: "We offer flexible packages for birthdays, pre-weddings, weddings, corporate events, and product shoots. Share your event date and venue so Sonu can suggest the right crew setup.",
+    services: "We cover weddings, pre-weddings, birthdays, maternity, baby showers, corporate events, product shoots, model portfolios, drone coverage, reels, and more. Share your event date and venue so Sonu can suggest the right crew setup.",
     book: "You can book our dates online. Go to the Book tab, share your event details, and Sonu will contact you to confirm availability and next steps.",
     delivery: "We deliver RAW selection galleries to your Customer Portal within 4 days. Edited cinematic clips and printed albums are fully delivered within 3 to 4 weeks.",
     default: "I'm not sure about that detail. You can call or WhatsApp Sonu directly at 9494387387 or email snaplicaphotography@gmail.com for custom queries."
@@ -44,8 +44,8 @@ export const ChatbotWidget = () => {
 
       if (cleanText.includes("location") || cleanText.includes("where") || cleanText.includes("address") || cleanText.includes("place")) {
         reply = knowledgeBase.location;
-      } else if (cleanText.includes("package") || cleanText.includes("rate") || cleanText.includes("price") || cleanText.includes("cost")) {
-        reply = knowledgeBase.packages;
+      } else if (cleanText.includes("service") || cleanText.includes("shoot") || cleanText.includes("coverage") || cleanText.includes("crew")) {
+        reply = knowledgeBase.services;
       } else if (cleanText.includes("book") || cleanText.includes("schedule") || cleanText.includes("hire") || cleanText.includes("reserve")) {
         reply = knowledgeBase.book;
       } else if (cleanText.includes("delivery") || cleanText.includes("time") || cleanText.includes("when") || cleanText.includes("photo")) {
@@ -140,7 +140,7 @@ export const ChatbotWidget = () => {
             >
               <input
                 type="text"
-                placeholder="Ask about location, price, booking..."
+                placeholder="Ask about location, services, booking..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 className="flex-1 bg-transparent border border-white/5 rounded-xl px-4 py-2 text-xs text-white placeholder:text-gray-600 outline-none focus:border-brand-gold transition-colors font-sans"
