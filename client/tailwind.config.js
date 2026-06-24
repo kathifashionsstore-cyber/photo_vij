@@ -9,10 +9,10 @@ export default {
     extend: {
       colors: {
         brand: {
-          gold: '#C9A227',
-          amber: '#F59E0B',
-          dark: '#0A0A0A',
-          card: '#121212',
+          gold: 'rgb(var(--brand-gold-rgb) / <alpha-value>)',
+          amber: 'rgb(var(--brand-amber-rgb) / <alpha-value>)',
+          dark: 'rgb(var(--brand-dark-rgb) / <alpha-value>)',
+          card: 'rgb(var(--brand-card-rgb) / <alpha-value>)',
         }
       },
       fontFamily: {

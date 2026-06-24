@@ -26,6 +26,16 @@ const DEFAULT_THEME = {
   animationSpeed:   "normal",   // slow | normal | fast
 };
 
+const hexToRgbParts = (value, fallback) => {
+  const hex = String(value || "").replace("#", "").trim();
+  if (!/^[0-9a-f]{6}$/i.test(hex)) return fallback;
+  return [
+    parseInt(hex.slice(0, 2), 16),
+    parseInt(hex.slice(2, 4), 16),
+    parseInt(hex.slice(4, 6), 16),
+  ].join(" ");
+};
+
 export function useDynamicTheme() {
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "settings", "theme"), (snap) => {
@@ -36,24 +46,29 @@ export function useDynamicTheme() {
   }, []);
 }
 
-function applyTheme(theme) {
+export function applyTheme(theme) {
+  const mergedTheme = { ...DEFAULT_THEME, ...theme };
   const root = document.documentElement;
-  root.style.setProperty("--color-primary",      theme.colorPrimary);
-  root.style.setProperty("--color-primary-dark",  theme.colorPrimaryDark);
-  root.style.setProperty("--color-accent",        theme.colorAccent);
-  root.style.setProperty("--color-bg",            theme.colorBg);
-  root.style.setProperty("--color-surface",       theme.colorSurface);
-  root.style.setProperty("--color-border",        theme.colorBorder);
-  root.style.setProperty("--color-text",          theme.colorText);
-  root.style.setProperty("--color-text-muted",    theme.colorTextMuted);
-  root.style.setProperty("--color-success",       theme.colorSuccess);
-  root.style.setProperty("--color-warning",       theme.colorWarning);
-  root.style.setProperty("--color-danger",        theme.colorDanger);
-  root.style.setProperty("--color-info",          theme.colorInfo);
-  root.style.setProperty("--public-bg",           theme.publicBg);
-  root.style.setProperty("--public-text",         theme.publicText);
-  root.style.setProperty("--public-primary",      theme.publicPrimary);
-  root.style.setProperty("--border-radius",       theme.borderRadius + "px");
+  root.style.setProperty("--color-primary",      mergedTheme.colorPrimary);
+  root.style.setProperty("--color-primary-dark",  mergedTheme.colorPrimaryDark);
+  root.style.setProperty("--color-accent",        mergedTheme.colorAccent);
+  root.style.setProperty("--color-bg",            mergedTheme.colorBg);
+  root.style.setProperty("--color-surface",       mergedTheme.colorSurface);
+  root.style.setProperty("--color-border",        mergedTheme.colorBorder);
+  root.style.setProperty("--color-text",          mergedTheme.colorText);
+  root.style.setProperty("--color-text-muted",    mergedTheme.colorTextMuted);
+  root.style.setProperty("--color-success",       mergedTheme.colorSuccess);
+  root.style.setProperty("--color-warning",       mergedTheme.colorWarning);
+  root.style.setProperty("--color-danger",        mergedTheme.colorDanger);
+  root.style.setProperty("--color-info",          mergedTheme.colorInfo);
+  root.style.setProperty("--public-bg",           mergedTheme.publicBg);
+  root.style.setProperty("--public-text",         mergedTheme.publicText);
+  root.style.setProperty("--public-primary",      mergedTheme.publicPrimary);
+  root.style.setProperty("--border-radius",       `${mergedTheme.borderRadius}px`);
+  root.style.setProperty("--brand-gold-rgb",      hexToRgbParts(mergedTheme.colorPrimary, "201 162 39"));
+  root.style.setProperty("--brand-amber-rgb",     hexToRgbParts(mergedTheme.colorPrimaryDark, "245 158 11"));
+  root.style.setProperty("--brand-dark-rgb",      hexToRgbParts(mergedTheme.colorBg, "10 10 10"));
+  root.style.setProperty("--brand-card-rgb",      hexToRgbParts(mergedTheme.colorSurface, "18 18 18"));
   
   // Google Fonts dynamic load
   const fontLinkId = "dynamic-theme-fonts";
@@ -64,9 +79,9 @@ function applyTheme(theme) {
     fontLink.rel = "stylesheet";
     document.head.appendChild(fontLink);
   }
-  const headingFont = (theme.fontHeading || "Playfair Display").replace(/ /g, "+");
-  const bodyFont = (theme.fontBody || "Inter").replace(/ /g, "+");
+  const headingFont = (mergedTheme.fontHeading || "Playfair Display").replace(/ /g, "+");
+  const bodyFont = (mergedTheme.fontBody || "Inter").replace(/ /g, "+");
   fontLink.href = `https://fonts.googleapis.com/css2?family=${headingFont}:wght@300;400;600;700&family=${bodyFont}:wght@300;400;500;600;700&display=swap`;
-  root.style.setProperty("--font-heading", `'${theme.fontHeading}', serif`);
-  root.style.setProperty("--font-body", `'${theme.fontBody}', sans-serif`);
+  root.style.setProperty("--font-heading", `'${mergedTheme.fontHeading}', serif`);
+  root.style.setProperty("--font-body", `'${mergedTheme.fontBody}', sans-serif`);
 }

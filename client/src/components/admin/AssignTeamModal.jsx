@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { arrayUnion, collection, getDocs, updateDoc, doc, addDoc, serverTimestamp, query, where } from "firebase/firestore";
 import { db, auth } from "../../firebase";
-import { buildTeamAssignmentWhatsApp } from "../../utils/whatsapp";
+import { buildTeamAssignmentWhatsApp, normalizePhone } from "../../utils/whatsapp";
 
 const WAIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -22,8 +22,8 @@ const formatDate = (dateStr) => {
 
 export default function AssignTeamModal({ booking, onAssign, onClose }) {
   const [teams, setTeams] = useState([]);
-  const [members, setMembers] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [draggingTeamId, setDraggingTeamId] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -35,14 +35,15 @@ export default function AssignTeamModal({ booking, onAssign, onClose }) {
         const [teamsSnap, membersSnap, bookingsSnap] = await Promise.all([
           getDocs(collection(db, "teams")),
           getDocs(collection(db, "members")),
-          getDocs(query(collection(db, "bookings"), where("eventDate", "==", booking.eventDate)))
+          booking.eventDate
+            ? getDocs(query(collection(db, "bookings"), where("eventDate", "==", booking.eventDate)))
+            : Promise.resolve({ forEach: () => {} })
         ]);
 
         const membersList = [];
         membersSnap.forEach(d => {
           membersList.push({ id: d.id, ...d.data() });
         });
-        setMembers(membersList);
 
         const busyTeamIds = new Set();
         bookingsSnap.forEach(doc => {
@@ -57,12 +58,15 @@ export default function AssignTeamModal({ booking, onAssign, onClose }) {
         teamsSnap.forEach(doc => {
           const tData = doc.data();
           const leader = membersList.find(m => m.id === tData.leaderId);
+          const leaderName = tData.leaderName || tData.leader || leader?.name || "None Assigned";
+          const leaderPhone = normalizePhone(tData.leaderPhone || tData.assignedTeamLeaderPhone || tData.phone || leader?.phone || "");
           teamsList.push({
             id: doc.id,
-            name: tData.name,
-            leaderName: leader ? leader.name : "None Assigned",
-            leaderPhone: leader ? leader.phone : "",
+            name: tData.teamName || tData.name || "Untitled Team",
+            leaderName,
+            leaderPhone,
             rating: tData.rating || 5,
+            members: Array.isArray(tData.members) ? tData.members : [],
             isAvailable: !busyTeamIds.has(doc.id)
           });
         });
@@ -77,10 +81,8 @@ export default function AssignTeamModal({ booking, onAssign, onClose }) {
       }
     };
 
-    if (booking?.eventDate) {
-      fetchData();
-    }
-  }, [booking?.eventDate]);
+    if (booking?.id) fetchData();
+  }, [booking?.id, booking?.eventDate]);
 
   const handleAssign = async () => {
     if (!selectedTeam) return;
@@ -132,6 +134,18 @@ export default function AssignTeamModal({ booking, onAssign, onClose }) {
     }
   };
 
+  const chooseTeam = (team) => {
+    if (team?.isAvailable) setSelectedTeam(team);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    const teamId = event.dataTransfer.getData("text/plain") || draggingTeamId;
+    const team = teams.find((item) => item.id === teamId);
+    chooseTeam(team);
+    setDraggingTeamId("");
+  };
+
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[99000] flex items-center justify-center p-4">
       <div className="bg-[#0F1117] border border-white/10 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl relative overflow-hidden">
@@ -154,17 +168,37 @@ export default function AssignTeamModal({ booking, onAssign, onClose }) {
             <span className="text-[10px] text-gray-500 font-mono">Verifying Availability...</span>
           </div>
         ) : (
-          <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+          <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
+            <div
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={handleDrop}
+              className={`rounded-2xl border border-dashed p-4 text-center transition-colors ${
+                selectedTeam ? "border-brand-gold bg-brand-gold/10" : "border-white/10 bg-black/30"
+              }`}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-gold">
+                {selectedTeam ? `Dropped: ${selectedTeam.name}` : `Drop team for ${booking.clientName || "this booking"}`}
+              </p>
+              <p className="mt-1 text-[9px] text-gray-500">Click a team below as the fallback for mobile and keyboard use.</p>
+            </div>
             {teams.length === 0 ? (
               <p className="text-xs text-gray-600 text-center py-6">No teams registered. Go to Teams dashboard first.</p>
             ) : (
               teams.map((team) => (
                 <div
                   key={team.id}
-                  onClick={() => team.isAvailable && setSelectedTeam(team)}
+                  draggable={team.isAvailable}
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData("text/plain", team.id);
+                    setDraggingTeamId(team.id);
+                  }}
+                  onDragEnd={() => setDraggingTeamId("")}
+                  onClick={() => chooseTeam(team)}
                   className={`p-4 rounded-2xl border transition-all flex justify-between items-center cursor-pointer
                     ${!team.isAvailable 
                       ? 'opacity-40 bg-black/20 border-white/5 cursor-not-allowed' 
+                      : draggingTeamId === team.id
+                        ? 'border-brand-gold bg-brand-gold/20'
                       : selectedTeam?.id === team.id
                         ? 'border-brand-gold bg-brand-gold/10'
                         : 'border-white/5 bg-black/40 hover:border-white/10'}`}
@@ -180,6 +214,9 @@ export default function AssignTeamModal({ booking, onAssign, onClose }) {
                     </div>
                     <span className="text-[10px] text-gray-500 block">
                       Leader: <strong className="text-gray-300 font-medium">{team.leaderName}</strong>
+                    </span>
+                    <span className="text-[9px] text-gray-600 block">
+                      {team.members.length} member{team.members.length === 1 ? "" : "s"} registered
                     </span>
                   </div>
                   <div className="flex flex-col items-end gap-1">

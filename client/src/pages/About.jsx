@@ -1,8 +1,10 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { Heart, Trophy, Video } from "lucide-react";
 import HeroSection from "../components/HeroSection";
 import SEOHead from "../components/SEOHead";
 import GoogleReviews from "../components/GoogleReviews";
+import { SERVICES } from "../data/services";
 
 const gold = "#c9a227";
 
@@ -35,6 +37,7 @@ export default function About() {
       <HeroSection pageId="about" />
 
       <FounderSection />
+      <ServicesSection />
       <AwardsSection />
       <HelpingHandsSection />
       <TeamSection />
@@ -97,6 +100,28 @@ const FounderSection = () => (
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  </section>
+);
+
+const ServicesSection = () => (
+  <section className="bg-[#f7f7f4] px-6 py-20 md:px-12">
+    <div className="mx-auto max-w-7xl">
+      <div className="mx-auto mb-12 max-w-2xl text-center">
+        <span className="mb-3 block text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">What We Do</span>
+        <h2 className="text-3xl font-bold text-[#111] md:text-5xl">Photography Services</h2>
+      </div>
+
+      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+        {SERVICES.map((service) => (
+          <Link key={service.id} to={`/services/${service.id}`} className="group text-center no-underline">
+            <div className="mx-auto aspect-square w-full max-w-[150px] overflow-hidden rounded-full border-4 border-white bg-white shadow-lg shadow-black/10 transition-transform duration-300 group-hover:-translate-y-1">
+              <img src={service.image} alt={service.title} className="h-full w-full object-cover" />
+            </div>
+            <p className="mt-3 text-sm font-bold text-[#1b1b1b]">{service.shortTitle}</p>
+          </Link>
+        ))}
       </div>
     </div>
   </section>

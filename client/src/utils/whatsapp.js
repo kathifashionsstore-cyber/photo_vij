@@ -91,23 +91,30 @@ export const buildTeamAssignmentWhatsApp = (teamLeaderPhone, booking) => {
   const venue = booking.venue || booking.venueAddress || "";
   const venueQuery = encodeURIComponent(`${venue} Vijayawada`);
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${venueQuery}`;
+  const service = normalizeService(booking);
+  const packageName = booking.packageName || booking.package || booking.selectedPackage || booking.duration || "Not specified";
+  const notes = booking.specialRequirements || booking.specialNotes || booking.comments || booking.notes || "None";
 
-  const message = `NEW ASSIGNMENT - SNAPLICA
+  const message = `SNAPLICA TEAM ASSIGNMENT RECEIPT
 
 Hi ${booking.teamLeaderName || "Team Leader"}!
 
-Service Type: ${normalizeService(booking)}
+Team: ${booking.assignedTeamName || booking.teamName || ""}
+
+Client Details
 Client: ${booking.clientName || ""}
 Client Phone: ${booking.clientPhone || booking.phone || ""}
+Event Type: ${booking.eventType || service}
+Service / Package: ${service} - ${packageName}
 Date: ${formatDate(booking.eventDate)}
 Time: ${booking.eventTime || ""}
 Venue: ${venue}
-Notes: ${booking.specialRequirements || booking.specialNotes || booking.comments || "None"}
+Special Notes: ${notes}
 
 Location on Maps:
 ${mapsLink}
 
-Please confirm availability by replying yes.
+Please confirm availability and reporting readiness by replying yes.
 - Snaplica Admin`;
 
   return whatsappUrl(teamLeaderPhone, message);

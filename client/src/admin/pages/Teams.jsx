@@ -14,6 +14,7 @@ import {
   Calendar,
   CheckCircle,
   Clock,
+  Edit,
   MessageCircle,
   Phone,
   Plus,
@@ -22,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { db } from "../../firebase";
+import { buildTeamAssignmentWhatsApp } from "../../utils/whatsapp";
 
 const gold = "#c9a227";
 
@@ -92,6 +94,7 @@ export default function Teams() {
   const [teamForm, setTeamForm] = useState(EMPTY_TEAM);
   const [members, setMembers] = useState([{ ...EMPTY_MEMBER }]);
   const [assignForm, setAssignForm] = useState(EMPTY_ASSIGN);
+  const [editingTeamId, setEditingTeamId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState("teams");
 
@@ -137,9 +140,28 @@ export default function Teams() {
   const resetTeam = () => {
     setTeamForm(EMPTY_TEAM);
     setMembers([{ ...EMPTY_MEMBER }]);
+    setEditingTeamId(null);
   };
 
   const resetAssign = () => setAssignForm(EMPTY_ASSIGN);
+
+  const openNewTeam = () => {
+    resetTeam();
+    setShowTeam(true);
+  };
+
+  const openEditTeam = (team) => {
+    setEditingTeamId(team.id);
+    setTeamForm({
+      teamName: getTeamName(team),
+      leaderName: getLeaderName(team) === "Not added" ? "" : getLeaderName(team),
+      leaderPhone: getLeaderPhone(team),
+      notes: team.notes || "",
+    });
+    const savedMembers = getMembers(team);
+    setMembers(savedMembers.length ? savedMembers.map((member, index) => ({ id: member.id || `member-${index}`, ...member })) : [{ ...EMPTY_MEMBER }]);
+    setShowTeam(true);
+  };
 
   const saveTeam = async () => {
     if (!teamForm.teamName.trim() || !teamForm.leaderName.trim()) {
@@ -149,15 +171,33 @@ export default function Teams() {
 
     setSaving(true);
     try {
-      await addDoc(collection(db, "teams"), {
+      const cleanMembers = members
+        .filter((member) => member.name.trim())
+        .map((member, index) => ({
+          id: member.id || `${Date.now()}-${index}`,
+          name: member.name.trim(),
+          phone: normalizePhone(member.phone),
+          role: member.role || EMPTY_MEMBER.role,
+        }));
+      const payload = {
         ...teamForm,
+        teamName: teamForm.teamName.trim(),
+        name: teamForm.teamName.trim(),
+        leaderName: teamForm.leaderName.trim(),
         leaderPhone: normalizePhone(teamForm.leaderPhone),
-        members: members
-          .filter((member) => member.name.trim())
-          .map((member) => ({ ...member, phone: normalizePhone(member.phone) })),
-        createdAt: serverTimestamp(),
+        phone: normalizePhone(teamForm.leaderPhone),
+        members: cleanMembers,
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      if (editingTeamId) {
+        await updateDoc(doc(db, "teams", editingTeamId), payload);
+      } else {
+        await addDoc(collection(db, "teams"), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        });
+      }
       resetTeam();
       setShowTeam(false);
     } catch (err) {
@@ -165,6 +205,26 @@ export default function Teams() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const deleteTeam = async (team) => {
+    const active = activeAssignments.find((item) => item.teamId === team.id);
+    if (active) {
+      alert(`${getTeamName(team)} is assigned to ${active.clientName || "an active project"}. Complete or remove that assignment before deleting the team.`);
+      return;
+    }
+    if (!window.confirm(`Delete ${getTeamName(team)} and all embedded member records?`)) return;
+    await deleteDoc(doc(db, "teams", team.id));
+  };
+
+  const deleteMemberFromTeam = async (team, memberIndex) => {
+    const member = getMembers(team)[memberIndex];
+    if (!member) return;
+    if (!window.confirm(`Delete ${member.name || "this member"} from ${getTeamName(team)}?`)) return;
+    await updateDoc(doc(db, "teams", team.id), {
+      members: getMembers(team).filter((_, index) => index !== memberIndex),
+      updatedAt: serverTimestamp(),
+    });
   };
 
   const saveAssignment = async () => {
@@ -192,27 +252,14 @@ export default function Teams() {
       });
 
       if (team && getLeaderPhone(team)) {
-        const mapQ = encodeURIComponent(`${assignForm.venue || "Vijayawada"} Vijayawada`);
-        const msg = encodeURIComponent(
-          [
-            "*NEW SNAPLICA ASSIGNMENT*",
-            "",
-            `Hi ${getLeaderName(team)}!`,
-            "",
-            `Event: ${assignForm.eventType}`,
-            `Client: ${assignForm.clientName}`,
-            `Start: ${fmt(assignForm.startDate)}`,
-            `End: ${fmt(endDate)}`,
-            `Venue: ${assignForm.venue || "-"}`,
-            assignForm.notes ? `Notes: ${assignForm.notes}` : "",
-            "",
-            `Location: https://maps.google.com/maps?q=${mapQ}`,
-            "",
-            "Please confirm availability.",
-            "- Snaplica Admin",
-          ].filter(Boolean).join("\n"),
-        );
-        window.open(`https://wa.me/91${getLeaderPhone(team)}?text=${msg}`, "_blank");
+        window.open(buildTeamAssignmentWhatsApp(getLeaderPhone(team), {
+          ...assignForm,
+          eventDate: assignForm.startDate,
+          eventTime: "",
+          specialNotes: assignForm.notes,
+          teamLeaderName: getLeaderName(team),
+          assignedTeamName: getTeamName(team),
+        }), "_blank");
       }
 
       resetAssign();
@@ -248,7 +295,7 @@ export default function Teams() {
           <button onClick={() => setShowAssign(true)} style={{ ...btnGold, background: "rgba(59,130,246,0.15)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.25)" }}>
             <Calendar size={15} /> Assign Project
           </button>
-          <button onClick={() => setShowTeam(true)} style={btnGold}>
+          <button onClick={openNewTeam} style={btnGold}>
             <Plus size={15} /> New Team
           </button>
         </div>
@@ -265,7 +312,7 @@ export default function Teams() {
       {tab === "teams" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 16 }}>
           {teams.length === 0 && (
-            <EmptyState title="No teams yet" action="Add First Team" onAction={() => setShowTeam(true)} />
+            <EmptyState title="No teams yet" action="Add First Team" onAction={openNewTeam} />
           )}
 
           {teams.map((team) => {
@@ -280,7 +327,15 @@ export default function Teams() {
                     <h3 style={{ margin: 0, fontSize: 17, color: gold, fontWeight: 800 }}>{getTeamName(team)}</h3>
                     <p style={{ margin: "4px 0 0", fontSize: 12, color: "rgba(255,255,255,0.45)" }}>Leader: {getLeaderName(team)}</p>
                   </div>
-                  <StatusBadge status={status} />
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    <StatusBadge status={status} />
+                    <button onClick={() => openEditTeam(team)} style={{ ...smallAction(gold), padding: 8 }} title="Edit team">
+                      <Edit size={13} />
+                    </button>
+                    <button onClick={() => deleteTeam(team)} style={{ ...smallAction("#ef4444"), padding: 8 }} title="Delete team">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
 
                 {!status.free && (
@@ -309,12 +364,22 @@ export default function Teams() {
                         <div style={{ color: "rgba(201,162,39,0.9)", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 5 }}>
                           {role}
                         </div>
-                        {roleGroups[role].map((member, index) => (
+                        {roleGroups[role].map((member, index) => {
+                          const memberIndex = getMembers(team).findIndex((item) => item === member || (item.id && item.id === member.id));
+                          return (
                           <div key={`${role}-${member.name}-${index}`} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "3px 0", color: "rgba(255,255,255,0.62)", fontSize: 12 }}>
                             <span>{member.name}</span>
-                            <span style={{ color: "rgba(255,255,255,0.32)" }}>{member.phone || ""}</span>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.32)" }}>
+                              {member.phone || ""}
+                              <button onClick={() => openEditTeam(team)} style={miniIcon(gold)} title="Edit member">
+                                <Edit size={11} />
+                              </button>
+                              <button onClick={() => deleteMemberFromTeam(team, memberIndex)} style={miniIcon("#ef4444")} title="Delete member">
+                                <Trash2 size={11} />
+                              </button>
+                            </span>
                           </div>
-                        ))}
+                        )})}
                       </div>
                     ))}
                   </div>
@@ -399,7 +464,7 @@ export default function Teams() {
       )}
 
       {showTeam && (
-        <Modal title="New Team" onClose={() => setShowTeam(false)} width={620}>
+        <Modal title={editingTeamId ? "Edit Team" : "New Team"} onClose={() => { setShowTeam(false); resetTeam(); }} width={620}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
             <div style={{ gridColumn: "1/-1" }}>
               <Label>Team Name *</Label>
@@ -450,8 +515,8 @@ export default function Teams() {
           </div>
 
           <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-            <button type="button" onClick={() => setShowTeam(false)} style={{ flex: 1, ...btnOutline }}>Cancel</button>
-            <button type="button" onClick={saveTeam} disabled={saving} style={{ flex: 2, ...btnGold }}>{saving ? "Saving..." : "Save Team"}</button>
+            <button type="button" onClick={() => { setShowTeam(false); resetTeam(); }} style={{ flex: 1, ...btnOutline }}>Cancel</button>
+            <button type="button" onClick={saveTeam} disabled={saving} style={{ flex: 2, ...btnGold }}>{saving ? "Saving..." : (editingTeamId ? "Update Team" : "Save Team")}</button>
           </div>
         </Modal>
       )}
@@ -573,6 +638,7 @@ const inputStyle = { width: "100%", boxSizing: "border-box", background: "rgba(2
 const btnGold = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 18px", background: "linear-gradient(135deg,#c9a227,#e8b93f)", color: "#000", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 800, cursor: "pointer" };
 const btnOutline = { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 18px", background: "transparent", color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer" };
 const miniGold = { display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(201,162,39,0.12)", border: "1px solid rgba(201,162,39,0.22)", color: gold, borderRadius: 7, padding: "5px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+const miniIcon = (color) => ({ width: 23, height: 23, borderRadius: 7, border: `1px solid ${color}28`, background: `${color}12`, color, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" });
 const smallAction = (color) => ({ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 10px", borderRadius: 9, border: `1px solid ${color}28`, background: `${color}14`, color, fontSize: 12, fontWeight: 800, cursor: "pointer" });
 const modalBackdrop = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
 const modalCard = { background: "#0f0f12", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "clamp(16px,4vw,28px)", width: "100%", maxHeight: "90vh", overflowY: "auto", boxSizing: "border-box" };

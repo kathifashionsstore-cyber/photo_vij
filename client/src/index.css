@@ -3,14 +3,47 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --brand-gold-rgb: 201 162 39;
+    --brand-amber-rgb: 245 158 11;
+    --brand-dark-rgb: 10 10 10;
+    --brand-card-rgb: 18 18 18;
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Outfit', sans-serif;
+  }
+
   body {
-    background-color: #0A0A0A;
-    color: #FFFFFF;
-    font-family: 'Outfit', sans-serif;
+    background-color: var(--color-bg, #0A0A0A);
+    color: var(--color-text, #FFFFFF);
+    font-family: var(--font-body);
   }
   
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
+    font-family: var(--font-heading);
+  }
+
+  select {
+    color-scheme: dark;
+    background-color: #101014;
+    color: #f8fafc;
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  select option,
+  select optgroup {
+    background-color: #101014;
+    color: #f8fafc;
+  }
+
+  select option:checked,
+  select option:hover {
+    background-color: #c9a227;
+    color: #050505;
+  }
+
+  select:disabled {
+    color: rgba(255, 255, 255, 0.42);
+    background-color: rgba(255, 255, 255, 0.06);
   }
 }
 

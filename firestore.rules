@@ -34,6 +34,26 @@ match /galleries/{galleryId} {
   allow read, write: if isSignedIn();
 }
 
+match /gallery/{galleryId} {
+  allow read: if true;
+  allow write: if isSignedIn();
+}
+
+match /albums/{albumId} {
+  allow read: if true;
+  allow write: if isSignedIn();
+}
+
+match /homeHighlights/{highlightId} {
+  allow read: if true;
+  allow write: if isSignedIn();
+}
+
+match /homeVideos/{videoId} {
+  allow read: if true;
+  allow write: if isSignedIn();
+}
+
 match /invoices/{invoiceId} {
   allow read, write: if isSignedIn();
 }
@@ -43,7 +63,13 @@ match /notifications/{notificationId} {
 }
 
 match /settings/{docId} {
-  allow read, write: if isSignedIn();
+  allow read: if true;
+  allow write: if isSignedIn();
+}
+
+match /heroConfig/{pageId} {
+  allow read: if true;
+  allow write: if isSignedIn();
 }
 
 match /auditLogs/{logId} {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
+import { applyTheme } from "../../hooks/useTheme";
 import {
   AlertCircle,
   CheckCircle,
@@ -131,6 +132,15 @@ export const SettingsPage = () => {
   const [heroForm, setHeroForm] = useState(emptyHero("home"));
   const [uploadingHero, setUploadingHero] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+
+  useEffect(() => {
+    if (activeTab === "theme") {
+      applyTheme({
+        ...themeForm,
+        borderRadius: Number(themeForm.borderRadius || 12),
+      });
+    }
+  }, [activeTab, themeForm]);
 
   useEffect(() => {
     const loadSettings = async () => {

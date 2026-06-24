@@ -28,7 +28,8 @@ import {
 import AssignTeamModal from "../../components/admin/AssignTeamModal";
 import { 
   buildClientConfirmationWhatsApp, 
-  buildTeamAssignmentWhatsApp
+  buildTeamAssignmentWhatsApp,
+  normalizePhone
 } from "../../utils/whatsapp";
 
 const STATUS_COLORS = {
@@ -117,10 +118,12 @@ export const Calendar = () => {
       teamsSnap.forEach(tDoc => {
         const tData = tDoc.data();
         const leader = membersList.find(m => m.id === tData.leaderId);
+        const leaderName = tData.leaderName || tData.leader || leader?.name || "None";
         availability.push({
           id: tDoc.id,
-          name: tData.name,
-          leaderName: leader ? leader.name : "None",
+          name: tData.teamName || tData.name || "Untitled Team",
+          leaderName,
+          leaderPhone: normalizePhone(tData.leaderPhone || tData.phone || leader?.phone || ""),
           isFree: !bookedTeamIdsTomorrow.has(tDoc.id),
           assignedEvent: tomorrowList.find(b => b.assignedTeam === tDoc.id)
         });

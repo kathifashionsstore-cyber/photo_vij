@@ -578,6 +578,7 @@ export default function Bookings() {
               assignedTeamId: team.id,
               assignedTeamName: team.name,
               teamLeaderName: team.leaderName,
+              teamLeaderPhone: team.leaderPhone,
               assignedTeamLeaderPhone: team.leaderPhone,
               status: "assigned",
               lastAction: `Team assigned: ${team.name}`,

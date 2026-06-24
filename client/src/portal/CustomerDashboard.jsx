@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Download, Eye, CheckCircle, Clock } from 'lucide-react';
+import { Calendar, Download, Eye, CheckCircle, Clock, Mail, Phone, User } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import SEOHead from '../components/SEOHead';
@@ -18,6 +18,8 @@ export const CustomerDashboard = () => {
         // Set mock data as default for local workspace builds
         setBooking({
           clientName: "Rahul Verma",
+          clientPhone: "9876543210",
+          clientEmail: "rahul@example.com",
           serviceType: "Wedding Photography",
           eventDate: "2026-07-15",
           venueAddress: "A-Convention Hall, Vijayawada",
@@ -158,6 +160,32 @@ export const CustomerDashboard = () => {
 
             {/* Right Quick Summary */}
             <div className="lg:col-span-1 space-y-6">
+              <div className="glass-card p-6 rounded-2xl border border-white/5 space-y-4">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-gold/10 text-brand-gold">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-serif font-bold text-lg">Customer Profile</h3>
+                    <p className="text-gray-500 text-xs">Booking access and contact details</p>
+                  </div>
+                </div>
+                <div className="space-y-3 text-xs">
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <User className="h-4 w-4 text-brand-gold" />
+                    <span>{booking?.clientName}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Phone className="h-4 w-4 text-brand-gold" />
+                    <span>{booking?.clientPhone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Mail className="h-4 w-4 text-brand-gold" />
+                    <span>{booking?.clientEmail}</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="glass-card p-6 rounded-2xl border border-white/5 space-y-4 text-center">
                 <div className="w-12 h-12 bg-brand-gold/10 text-brand-gold rounded-full flex items-center justify-center mx-auto">
                   <Clock className="w-6 h-6" />
