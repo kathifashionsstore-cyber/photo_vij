@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, User, Calendar, Receipt, Users, Camera, Info } from 'lucide-react';
+import { Search, X, User, Calendar, Receipt, Camera, Info } from 'lucide-react';
 import { globalSearch } from './searchEngine';
 import { modalScale } from '../animations/variants';
 
@@ -62,7 +62,7 @@ export const SearchOverlay = ({ onClose }) => {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search bookings, clients, invoices, crew members, gear..."
+            placeholder="Search bookings, clients, invoices, gear..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 bg-transparent text-white text-base outline-none placeholder:text-gray-600 font-sans"
@@ -108,7 +108,6 @@ export const SearchOverlay = ({ onClose }) => {
             <SearchResultsGroup title="Leads & Clients" icon={User} results={results.clients} query={query} />
             <SearchResultsGroup title="Bookings scheduled" icon={Calendar} results={results.bookings} query={query} />
             <SearchResultsGroup title="Invoices log" icon={Receipt} results={results.invoices} query={query} />
-            <SearchResultsGroup title="Crews & Teams" icon={Users} results={results.teams} query={query} />
             <SearchResultsGroup title="Studio Gear" icon={Camera} results={results.equipment} query={query} />
 
             {!hasResults && !isSearching && (

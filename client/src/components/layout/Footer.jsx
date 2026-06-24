@@ -35,7 +35,7 @@ export const Footer = () => {
           <h4 className="text-white font-serif text-lg mb-4">Quick Links</h4>
           <ul className="space-y-2 text-sm font-light">
             <li><Link to="/" className="hover:text-brand-gold transition-colors">Home</Link></li>
-            <li><Link to="/about" className="hover:text-brand-gold transition-colors">About Sonu & Team</Link></li>
+            <li><Link to="/about" className="hover:text-brand-gold transition-colors">About Snaplica</Link></li>
             <li><Link to="/services" className="hover:text-brand-gold transition-colors">Services</Link></li>
             <li><Link to="/portfolio" className="hover:text-brand-gold transition-colors">Our Portfolio</Link></li>
             <li><Link to="/booking" className="hover:text-brand-gold transition-colors">Book Shoot</Link></li>

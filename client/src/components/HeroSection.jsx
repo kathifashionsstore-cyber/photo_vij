@@ -20,8 +20,8 @@ const DEFAULT_HERO_CONFIG = {
   },
   about: {
     heading: 'Our Story - Passion Meets Perfection',
-    subheading: "Meet Sonu and the crew behind Snaplica's cinematic wedding and event coverage.",
-    cta1Text: 'Meet the Team',
+    subheading: "Meet Sonu and the story behind Snaplica's cinematic wedding and event coverage.",
+    cta1Text: 'Read Our Story',
     cta1Url: '/about',
     cta2Text: 'Book Now',
     cta2Url: '/booking',
@@ -52,7 +52,7 @@ const DEFAULT_HERO_CONFIG = {
   },
   booking: {
     heading: 'Book Your Dream Photo Session',
-    subheading: 'Share your date, venue, service type, and creative requirements with our team.',
+    subheading: 'Share your date, venue, service type, and creative requirements with Snaplica.',
     cta1Text: 'Start Booking',
     cta1Url: '#booking-form',
     cta2Text: 'View Services',

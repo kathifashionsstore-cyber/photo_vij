@@ -27,7 +27,7 @@ export const FestivalBannerModal = () => {
             title: "Grand Wedding Festival Offer",
             imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=1200",
             titleText: "Book Your Dream Wedding Today",
-            discountText: "Plan your wedding coverage with Snaplica's award-winning creative team.",
+            discountText: "Plan your wedding coverage with Snaplica's award-winning studio.",
             ctaLink: "/booking"
           });
           // To make it look impressive but not annoying, we can pop it open:

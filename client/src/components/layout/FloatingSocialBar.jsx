@@ -45,7 +45,7 @@ export const LeftSocialBar = () => {
   ];
 
   return (
-    <div className="fixed bottom-28 left-3 z-[9000] flex flex-col gap-2 md:bottom-20 md:left-4">
+    <div className="fixed bottom-[calc(7.75rem+env(safe-area-inset-bottom,0px))] left-4 z-[9010] flex flex-col gap-2.5 md:bottom-20 md:left-4">
       {socials.map((item) => (
         <a
           key={item.label}
@@ -64,7 +64,7 @@ export const LeftSocialBar = () => {
 };
 
 export const RightSocialBar = () => (
-  <div className="fixed bottom-28 right-3 z-[9000] flex flex-col gap-3 md:bottom-20 md:right-4">
+  <div className="fixed bottom-[calc(12.75rem+env(safe-area-inset-bottom,0px))] right-4 z-[9010] flex flex-col gap-3 md:bottom-20 md:right-4">
     <a
       href="https://wa.me/919494387387?text=Hi%20Snaplica%20Photography!%20I%20want%20to%20book%20a%20shoot."
       target="_blank"

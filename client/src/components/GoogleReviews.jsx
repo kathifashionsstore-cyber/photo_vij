@@ -15,7 +15,7 @@ const fallbackReviews = [
     id: "fallback-2",
     name: "Anjali Devi",
     rating: 5,
-    text: "The team handled our family event professionally and delivered images everyone loved.",
+    text: "Snaplica handled our family event professionally and delivered images everyone loved.",
     eventType: "Birthday",
   },
   {

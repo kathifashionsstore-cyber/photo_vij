@@ -54,6 +54,16 @@ match /homeVideos/{videoId} {
   allow write: if isSignedIn();
 }
 
+match /serviceContent/{serviceId} {
+  allow read: if true;
+  allow write: if isSignedIn();
+}
+
+match /announcements/{announcementId} {
+  allow read: if true;
+  allow write: if isSignedIn();
+}
+
 match /invoices/{invoiceId} {
   allow read, write: if isSignedIn();
 }

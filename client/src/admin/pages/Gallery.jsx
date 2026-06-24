@@ -8,6 +8,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
 } from "firebase/firestore";
 import {
@@ -16,10 +17,8 @@ import {
   Eye,
   EyeOff,
   Film,
-  Image as ImageIcon,
   Link as LinkIcon,
   Loader2,
-  Plus,
   RefreshCcw,
   Save,
   Trash2,
@@ -30,18 +29,7 @@ import { SERVICES, SERVICE_LABELS } from "../../data/services";
 import { compressAndUploadImage } from "../../utils/imageUpload";
 import { toEmbeddableVideo } from "../../utils/videoLinks";
 
-const CATEGORY_OPTIONS = [
-  { id: "founder", label: "Founder" },
-  { id: "team", label: "Team" },
-  ...SERVICES.map((service) => ({ id: service.id, label: service.title })),
-];
-
-const DEFAULT_ALBUM = {
-  name: "",
-  category: "wedding",
-  description: "",
-  showInPublic: true,
-};
+const CATEGORY_OPTIONS = SERVICES.map((service) => ({ id: service.id, label: service.title }));
 
 const categoryLabel = (category) =>
   CATEGORY_OPTIONS.find((item) => item.id === category)?.label || SERVICE_LABELS[category] || category || "Uncategorized";
@@ -59,13 +47,16 @@ const describePhoto = (fileName, category) => {
 
 export default function Gallery() {
   const fileInputRef = useRef(null);
+  const servicePhotoInputRef = useRef(null);
   const highlightInputRef = useRef(null);
-  const [albums, setAlbums] = useState([]);
   const [photos, setPhotos] = useState([]);
+  const [serviceContent, setServiceContent] = useState({});
   const [highlights, setHighlights] = useState([]);
   const [videos, setVideos] = useState([]);
-  const [albumForm, setAlbumForm] = useState(DEFAULT_ALBUM);
-  const [selectedAlbumId, setSelectedAlbumId] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(CATEGORY_OPTIONS[0]?.id || "wedding");
+  const [selectedServiceId, setSelectedServiceId] = useState(CATEGORY_OPTIONS[0]?.id || "wedding");
+  const [serviceForm, setServiceForm] = useState({ photoUrl: "", description: "" });
+  const [servicePhotoUploading, setServicePhotoUploading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadStatuses, setUploadStatuses] = useState([]);
@@ -82,20 +73,22 @@ export default function Gallery() {
   const [videoError, setVideoError] = useState("");
 
   useEffect(() => {
-    const unsubscribeAlbums = onSnapshot(
-      query(collection(db, "albums"), orderBy("createdAt", "desc")),
-      (snap) => {
-        const list = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-        setAlbums(list);
-        setSelectedAlbumId((current) => current || list[0]?.id || "");
-      },
-      (err) => console.error("Albums listener failed:", err),
-    );
-
     const unsubscribePhotos = onSnapshot(
       query(collection(db, "gallery"), orderBy("createdAt", "desc")),
       (snap) => setPhotos(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))),
       (err) => console.error("Gallery listener failed:", err),
+    );
+
+    const unsubscribeServiceContent = onSnapshot(
+      collection(db, "serviceContent"),
+      (snap) => {
+        const next = {};
+        snap.docs.forEach((docSnap) => {
+          next[docSnap.id] = { id: docSnap.id, ...docSnap.data() };
+        });
+        setServiceContent(next);
+      },
+      (err) => console.error("Service content listener failed:", err),
     );
 
     const unsubscribeHighlights = onSnapshot(
@@ -111,41 +104,35 @@ export default function Gallery() {
     );
 
     return () => {
-      unsubscribeAlbums();
       unsubscribePhotos();
+      unsubscribeServiceContent();
       unsubscribeHighlights();
       unsubscribeVideos();
     };
   }, []);
 
-  const selectedAlbum = albums.find((album) => album.id === selectedAlbumId);
+  const selectedCategoryLabel = categoryLabel(selectedCategory);
   const visiblePhotos = useMemo(
-    () => photos.filter((photo) => photo.albumId === selectedAlbumId),
-    [photos, selectedAlbumId],
+    () => photos.filter((photo) => photo.category === selectedCategory || photo.serviceType === selectedCategory),
+    [photos, selectedCategory],
   );
 
-  const saveAlbum = async (event) => {
-    event.preventDefault();
-    if (!albumForm.name.trim()) return;
-
-    const docRef = await addDoc(collection(db, "albums"), {
-      ...albumForm,
-      name: albumForm.name.trim(),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      createdBy: auth.currentUser?.uid || "admin",
+  useEffect(() => {
+    const service = SERVICES.find((item) => item.id === selectedServiceId);
+    const saved = serviceContent[selectedServiceId] || {};
+    setServiceForm({
+      photoUrl: saved.photoUrl || saved.imageUrl || service?.image || "",
+      description: saved.description || service?.summary || "",
     });
-    setSelectedAlbumId(docRef.id);
-    setAlbumForm(DEFAULT_ALBUM);
-  };
+  }, [selectedServiceId, serviceContent]);
 
   const uploadFiles = async (files) => {
-    if (!selectedAlbum) {
-      setError("Select an album before uploading photos.");
+    if (!selectedCategory) {
+      setError("Select a service category before uploading photos.");
       return;
     }
 
-    const fileList = Array.from(files).filter((file) => file.type.startsWith("image/"));
+    const fileList = Array.from(files || []).filter((file) => file.type.startsWith("image/"));
     if (fileList.length === 0) {
       setError("Choose image files to upload.");
       return;
@@ -164,13 +151,12 @@ export default function Gallery() {
           setUploadStatuses((prev) => prev.map((item, itemIndex) => (itemIndex === index ? { ...item, status } : item)));
         };
         const { compressedFile, uploaded } = await compressAndUploadImage(file, updateStatus);
-        const description = describePhoto(file.name, selectedAlbum.category);
-        const payload = {
-          albumId: selectedAlbum.id,
-          albumName: selectedAlbum.name,
-          category: selectedAlbum.category,
-          serviceType: selectedAlbum.category,
-          description,
+        await addDoc(collection(db, "gallery"), {
+          albumId: selectedCategory,
+          albumName: selectedCategoryLabel,
+          category: selectedCategory,
+          serviceType: selectedCategory,
+          description: describePhoto(file.name, selectedCategory),
           fileName: file.name,
           imageUrl: uploaded.url,
           url: uploaded.url,
@@ -178,20 +164,13 @@ export default function Gallery() {
           deleteHash: uploaded.delete_hash || "",
           originalSize: file.size,
           compressedSize: compressedFile.size,
-          showInPublic: Boolean(selectedAlbum.showInPublic),
-          status: selectedAlbum.showInPublic ? "public" : "hidden",
+          showInPublic: true,
+          status: "public",
           source: "admin_gallery",
           uploadedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           uploadedBy: auth.currentUser?.uid || "admin",
-        };
-
-        const photoDoc = await addDoc(collection(db, "gallery"), payload);
-        await updateDoc(doc(db, "albums", selectedAlbum.id), {
-          coverUrl: selectedAlbum.coverUrl || uploaded.thumb?.url || uploaded.url,
-          updatedAt: serverTimestamp(),
-          lastPhotoId: photoDoc.id,
         });
 
         done += 1;
@@ -199,7 +178,7 @@ export default function Gallery() {
         setProgress(Math.round((done / fileList.length) * 100));
       }
 
-      setMessage(`${done} photo${done === 1 ? "" : "s"} uploaded.`);
+      setMessage(`${done} photo${done === 1 ? "" : "s"} uploaded to ${selectedCategoryLabel}.`);
     } catch (err) {
       console.error("Gallery upload failed:", err);
       setError(err.message || "Upload failed.");
@@ -207,20 +186,6 @@ export default function Gallery() {
       setUploading(false);
       setProgress(0);
     }
-  };
-
-  const triggerAlbumUpload = () => {
-    if (!selectedAlbum) {
-      setError("Select an album before uploading photos.");
-      return;
-    }
-    fileInputRef.current?.click();
-  };
-
-  const handleDropUpload = (event) => {
-    event.preventDefault();
-    if (uploading) return;
-    uploadFiles(event.dataTransfer.files);
   };
 
   const updatePhoto = async (photoId, values) => {
@@ -254,8 +219,49 @@ export default function Gallery() {
     await deleteDoc(doc(db, "gallery", photo.id));
   };
 
+  const uploadServicePhoto = async (file) => {
+    if (!file || !selectedServiceId) return;
+    setServicePhotoUploading(true);
+    setError("");
+    try {
+      const { compressedFile, uploaded } = await compressAndUploadImage(file);
+      const photoUrl = uploaded.url;
+      setServiceForm((prev) => ({ ...prev, photoUrl }));
+      await setDoc(doc(db, "serviceContent", selectedServiceId), {
+        serviceId: selectedServiceId,
+        photoUrl,
+        imageUrl: photoUrl,
+        thumbUrl: uploaded.thumb?.url || uploaded.medium?.url || uploaded.url,
+        originalSize: file.size,
+        compressedSize: compressedFile.size,
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser?.uid || "admin",
+      }, { merge: true });
+      setMessage("Service photo updated.");
+    } catch (err) {
+      console.error("Service photo upload failed:", err);
+      setError(err.message || "Service photo upload failed.");
+    } finally {
+      setServicePhotoUploading(false);
+    }
+  };
+
+  const saveServiceContent = async (event) => {
+    event.preventDefault();
+    if (!selectedServiceId) return;
+    await setDoc(doc(db, "serviceContent", selectedServiceId), {
+      serviceId: selectedServiceId,
+      photoUrl: serviceForm.photoUrl,
+      imageUrl: serviceForm.photoUrl,
+      description: serviceForm.description,
+      updatedAt: serverTimestamp(),
+      updatedBy: auth.currentUser?.uid || "admin",
+    }, { merge: true });
+    setMessage("Service detail content saved.");
+  };
+
   const uploadHighlightFiles = async (files) => {
-    const fileList = Array.from(files).filter((file) => file.type.startsWith("image/"));
+    const fileList = Array.from(files || []).filter((file) => file.type.startsWith("image/"));
     if (fileList.length === 0) {
       setHighlightError("Choose image files for the home highlight gallery.");
       return;
@@ -357,33 +363,20 @@ export default function Gallery() {
   };
 
   return (
-    <div className="space-y-7" onDragOver={(event) => event.preventDefault()} onDrop={handleDropUpload}>
+    <div className="space-y-7">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white md:text-3xl">Gallery Assets</h1>
-          <p className="mt-1 text-xs text-gray-500">Albums, ImgBB uploads, public visibility, and portfolio descriptions.</p>
+          <p className="mt-1 text-xs text-gray-500">Choose a service category, upload compressed photos, and manage public service visuals.</p>
         </div>
-        <button
-          type="button"
-          onClick={triggerAlbumUpload}
-          disabled={uploading}
-          className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-[8px] px-5 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${selectedAlbum ? "bg-brand-gold text-black hover:bg-amber-500" : "bg-white/10 text-gray-300 hover:text-white"}`}
-        >
+        <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="min-w-[220px] rounded-[8px] border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-brand-gold">
+          {CATEGORY_OPTIONS.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
+        </select>
+        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black transition-colors hover:bg-amber-500 disabled:opacity-60">
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           Upload Images
         </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          disabled={uploading}
-          onChange={(e) => {
-            uploadFiles(e.target.files);
-            e.target.value = "";
-          }}
-          className="hidden"
-        />
+        <input ref={fileInputRef} type="file" accept="image/*" multiple disabled={uploading} onChange={(e) => { uploadFiles(e.target.files); e.target.value = ""; }} className="hidden" />
       </div>
 
       {(message || error || uploading) && (
@@ -403,100 +396,46 @@ export default function Gallery() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
-        <aside className="space-y-5">
-          <form onSubmit={saveAlbum} className="rounded-[8px] border border-white/10 bg-brand-card p-5">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-white">
-              <Plus className="h-4 w-4 text-brand-gold" />
-              Create Album
-            </h2>
-            <div className="space-y-4">
-              <Field label="Album Name">
-                <input required value={albumForm.name} onChange={(e) => setAlbumForm((prev) => ({ ...prev, name: e.target.value }))} className={inputClass} placeholder="Wedding highlights" />
-              </Field>
-              <Field label="Category">
-                <select value={albumForm.category} onChange={(e) => setAlbumForm((prev) => ({ ...prev, category: e.target.value }))} className={inputClass}>
-                  {CATEGORY_OPTIONS.map((category) => (
-                    <option key={category.id} value={category.id}>{category.label}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Album Note">
-                <textarea value={albumForm.description} onChange={(e) => setAlbumForm((prev) => ({ ...prev, description: e.target.value }))} rows={3} className={`${inputClass} resize-none`} placeholder="Internal album context" />
-              </Field>
-              <label className="flex cursor-pointer items-center gap-3 rounded-[8px] border border-white/10 bg-black/30 p-3 text-xs text-gray-400">
-                <input type="checkbox" checked={albumForm.showInPublic} onChange={(e) => setAlbumForm((prev) => ({ ...prev, showInPublic: e.target.checked }))} className="h-4 w-4 accent-brand-gold" />
-                New uploads visible publicly
-              </label>
-              <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-4 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500">
-                <Save className="h-4 w-4" />
-                Save Album
-              </button>
-            </div>
-          </form>
-
-          <div className="rounded-[8px] border border-white/10 bg-brand-card p-4">
-            <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-400">Albums</h2>
-            <div className="space-y-2">
-              {albums.length === 0 && <p className="rounded-[8px] border border-dashed border-white/10 p-6 text-center text-xs text-gray-600">No albums yet.</p>}
-              {albums.map((album) => {
-                const count = photos.filter((photo) => photo.albumId === album.id).length;
-                return (
-                  <button
-                    key={album.id}
-                    type="button"
-                    onClick={() => setSelectedAlbumId(album.id)}
-                    className={`flex w-full items-center gap-3 rounded-[8px] border p-3 text-left transition-colors ${
-                      selectedAlbumId === album.id ? "border-brand-gold bg-brand-gold/10" : "border-white/10 bg-black/20 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="h-12 w-12 overflow-hidden rounded-[8px] bg-black/40">
-                      {album.coverUrl ? <img src={album.coverUrl} alt={album.name} className="h-full w-full object-cover" /> : <ImageIcon className="m-3 h-6 w-6 text-gray-600" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-bold text-white">{album.name}</p>
-                      <p className="mt-1 text-[11px] text-gray-500">{categoryLabel(album.category)} · {count} photos</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
+        <aside className="rounded-[8px] border border-white/10 bg-brand-card p-4">
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-400">Service Categories</h2>
+          <div className="space-y-2">
+            {CATEGORY_OPTIONS.map((category) => {
+              const count = photos.filter((photo) => photo.category === category.id || photo.serviceType === category.id).length;
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(category.id)}
+                  className={`flex w-full items-center justify-between gap-3 rounded-[8px] border p-3 text-left transition-colors ${selectedCategory === category.id ? "border-brand-gold bg-brand-gold/10" : "border-white/10 bg-black/20 hover:border-white/20"}`}
+                >
+                  <span className="truncate text-sm font-bold text-white">{category.label}</span>
+                  <span className="text-[11px] text-gray-500">{count}</span>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
         <main className="rounded-[8px] border border-white/10 bg-brand-card p-5">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-white">{selectedAlbum?.name || "Select an album"}</h2>
-              <p className="mt-1 text-xs text-gray-500">{selectedAlbum ? categoryLabel(selectedAlbum.category) : "Create an album to start uploading."}</p>
+              <h2 className="text-xl font-bold text-white">{selectedCategoryLabel}</h2>
+              <p className="mt-1 text-xs text-gray-500">Drag images here or use Upload Images. No album setup required.</p>
             </div>
             <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-500">{visiblePhotos.length} images</span>
           </div>
 
-          {selectedAlbum && visiblePhotos.length === 0 && (
-            <label
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={handleDropUpload}
-              className="flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/15 bg-black/20 p-8 text-center"
-            >
+          {visiblePhotos.length === 0 && (
+            <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); uploadFiles(event.dataTransfer.files); }} className="flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/15 bg-black/20 p-8 text-center">
               <Upload className="mb-4 h-10 w-10 text-brand-gold" />
-              <p className="text-sm font-bold text-white">Upload images into this album</p>
+              <p className="text-sm font-bold text-white">Upload images to {selectedCategoryLabel}</p>
               <p className="mt-2 max-w-md text-xs leading-6 text-gray-500">Images are compressed close to 300KB before uploading to ImgBB.</p>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                disabled={uploading}
-                onChange={(e) => {
-                  uploadFiles(e.target.files);
-                  e.target.value = "";
-                }}
-                className="hidden"
-              />
+              <input type="file" accept="image/*" multiple disabled={uploading} onChange={(e) => { uploadFiles(e.target.files); e.target.value = ""; }} className="hidden" />
             </label>
           )}
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); uploadFiles(event.dataTransfer.files); }} className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {visiblePhotos.map((photo) => (
               <article key={photo.id} className="overflow-hidden rounded-[8px] border border-white/10 bg-black/25">
                 <img src={photo.thumbUrl || photo.imageUrl} alt={photo.description || photo.fileName} className="aspect-[4/3] w-full object-cover" />
@@ -507,25 +446,11 @@ export default function Gallery() {
                     </span>
                     <span className="text-[10px] uppercase tracking-wider text-gray-600">{categoryLabel(photo.category)}</span>
                   </div>
-
-                  <textarea
-                    value={draftDescriptions[photo.id] ?? photo.description ?? ""}
-                    onChange={(e) => setDraftDescriptions((prev) => ({ ...prev, [photo.id]: e.target.value }))}
-                    onBlur={() => saveDescription(photo)}
-                    rows={3}
-                    className={`${inputClass} resize-none text-xs leading-5`}
-                  />
-
+                  <textarea value={draftDescriptions[photo.id] ?? photo.description ?? ""} onChange={(e) => setDraftDescriptions((prev) => ({ ...prev, [photo.id]: e.target.value }))} onBlur={() => saveDescription(photo)} rows={3} className={`${inputClass} resize-none text-xs leading-5`} />
                   <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => regenerateDescription(photo)} className={iconAction("#60a5fa")} title="Regenerate description">
-                      <RefreshCcw className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => togglePublic(photo)} className={iconAction(photo.showInPublic ? "#f59e0b" : "#22c55e")} title={photo.showInPublic ? "Hide image" : "Show image"}>
-                      {photo.showInPublic ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                    <button onClick={() => deletePhoto(photo)} className={iconAction("#ef4444")} title="Delete image">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <button onClick={() => regenerateDescription(photo)} className={iconAction("#60a5fa")} title="Regenerate description"><RefreshCcw className="h-4 w-4" /></button>
+                    <button onClick={() => togglePublic(photo)} className={iconAction(photo.showInPublic ? "#f59e0b" : "#22c55e")} title={photo.showInPublic ? "Hide image" : "Show image"}>{photo.showInPublic ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                    <button onClick={() => deletePhoto(photo)} className={iconAction("#ef4444")} title="Delete image"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
               </article>
@@ -535,77 +460,70 @@ export default function Gallery() {
       </div>
 
       <section className="rounded-[8px] border border-white/10 bg-brand-card p-5">
+        <div className="mb-5">
+          <h2 className="text-xl font-bold text-white">Service Detail Content</h2>
+          <p className="mt-1 text-xs text-gray-500">One representative photo and one description for each public service detail page.</p>
+        </div>
+        <form onSubmit={saveServiceContent} className="grid gap-5 lg:grid-cols-[320px_1fr]">
+          <div className="space-y-4">
+            <Field label="Service">
+              <select value={selectedServiceId} onChange={(e) => setSelectedServiceId(e.target.value)} className={inputClass}>
+                {CATEGORY_OPTIONS.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
+              </select>
+            </Field>
+            <div className="overflow-hidden rounded-[8px] bg-black/30">
+              <img src={serviceForm.photoUrl} alt={categoryLabel(selectedServiceId)} className="aspect-[4/3] w-full object-cover" />
+            </div>
+            <button type="button" onClick={() => servicePhotoInputRef.current?.click()} disabled={servicePhotoUploading} className="inline-flex w-full items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-4 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500 disabled:opacity-50">
+              {servicePhotoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Upload Service Photo
+            </button>
+            <input ref={servicePhotoInputRef} type="file" accept="image/*" disabled={servicePhotoUploading} onChange={(e) => { uploadServicePhoto(e.target.files?.[0]); e.target.value = ""; }} className="hidden" />
+          </div>
+          <div className="space-y-4">
+            <Field label="Description">
+              <textarea value={serviceForm.description} onChange={(e) => setServiceForm((prev) => ({ ...prev, description: e.target.value }))} rows={10} className={`${inputClass} resize-none leading-6`} />
+            </Field>
+            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500">
+              <Save className="h-4 w-4" />
+              Save Service Detail
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="rounded-[8px] border border-white/10 bg-brand-card p-5">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-white">Home Highlight Gallery</h2>
             <p className="mt-1 text-xs text-gray-500">Curated photos shown directly below the public Home hero.</p>
           </div>
-          <button
-            type="button"
-            disabled={highlightUploading}
-            onClick={() => highlightInputRef.current?.click()}
-            className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500 disabled:opacity-50"
-          >
+          <button type="button" disabled={highlightUploading} onClick={() => highlightInputRef.current?.click()} className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500 disabled:opacity-50">
             {highlightUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             Upload Highlights
           </button>
-          <input
-            ref={highlightInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            disabled={highlightUploading}
-            onChange={(e) => uploadHighlightFiles(e.target.files)}
-            onClick={(e) => {
-              e.currentTarget.value = "";
-            }}
-            className="hidden"
-          />
+          <input ref={highlightInputRef} type="file" accept="image/*" multiple disabled={highlightUploading} onChange={(e) => uploadHighlightFiles(e.target.files)} onClick={(e) => { e.currentTarget.value = ""; }} className="hidden" />
         </div>
 
         <div className="mb-5 grid gap-3 md:grid-cols-[1fr_auto]">
-          <input
-            value={highlightCaption}
-            onChange={(e) => setHighlightCaption(e.target.value)}
-            className={inputClass}
-            placeholder="Caption for the next uploaded highlight photos"
-          />
+          <input value={highlightCaption} onChange={(e) => setHighlightCaption(e.target.value)} className={inputClass} placeholder="Caption for the next uploaded highlight photos" />
           <div className="rounded-[8px] border border-white/10 bg-black/30 px-4 py-3 text-xs text-gray-400">
             {highlightUploading ? `Compressing/uploading (${highlightProgress}%)` : highlightError || highlightMessage || `${highlights.length} highlights live`}
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {highlights.length === 0 && (
-            <div className="rounded-[8px] border border-dashed border-white/10 p-8 text-center text-xs text-gray-600 md:col-span-2 xl:col-span-4">
-              No home highlights uploaded yet.
-            </div>
-          )}
+          {highlights.length === 0 && <div className="rounded-[8px] border border-dashed border-white/10 p-8 text-center text-xs text-gray-600 md:col-span-2 xl:col-span-4">No home highlights uploaded yet.</div>}
           {highlights.map((photo, index) => (
             <article key={photo.id} className="overflow-hidden rounded-[8px] border border-brand-gold/25 bg-black/25">
               <img src={photo.thumbUrl || photo.imageUrl} alt={photo.caption || photo.fileName} className="aspect-[4/3] w-full object-cover" />
               <div className="space-y-3 p-4">
-                <textarea
-                  value={highlightDrafts[photo.id] ?? photo.caption ?? ""}
-                  onChange={(e) => setHighlightDrafts((prev) => ({ ...prev, [photo.id]: e.target.value }))}
-                  onBlur={() => saveHighlightCaption(photo)}
-                  rows={2}
-                  className={`${inputClass} resize-none text-xs leading-5`}
-                  placeholder="Highlight caption"
-                />
+                <textarea value={highlightDrafts[photo.id] ?? photo.caption ?? ""} onChange={(e) => setHighlightDrafts((prev) => ({ ...prev, [photo.id]: e.target.value }))} onBlur={() => saveHighlightCaption(photo)} rows={2} className={`${inputClass} resize-none text-xs leading-5`} placeholder="Highlight caption" />
                 <div className="grid grid-cols-4 gap-2">
-                  <button onClick={() => moveHighlight(index, -1)} disabled={index === 0} className={iconAction("#c9a227")} title="Move up">
-                    <ArrowUp className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => moveHighlight(index, 1)} disabled={index === highlights.length - 1} className={iconAction("#c9a227")} title="Move down">
-                    <ArrowDown className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => updateDoc(doc(db, "homeHighlights", photo.id), { active: !photo.active, updatedAt: serverTimestamp() })} className={iconAction(photo.active ? "#f59e0b" : "#22c55e")} title={photo.active ? "Hide" : "Show"}>
-                    {photo.active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                  <button onClick={() => deleteHighlight(photo)} className={iconAction("#ef4444")} title="Delete highlight">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <button onClick={() => moveHighlight(index, -1)} disabled={index === 0} className={iconAction("#c9a227")} title="Move up"><ArrowUp className="h-4 w-4" /></button>
+                  <button onClick={() => moveHighlight(index, 1)} disabled={index === highlights.length - 1} className={iconAction("#c9a227")} title="Move down"><ArrowDown className="h-4 w-4" /></button>
+                  <button onClick={() => updateDoc(doc(db, "homeHighlights", photo.id), { active: !photo.active, updatedAt: serverTimestamp() })} className={iconAction(photo.active ? "#f59e0b" : "#22c55e")} title={photo.active ? "Hide" : "Show"}>{photo.active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                  <button onClick={() => deleteHighlight(photo)} className={iconAction("#ef4444")} title="Delete highlight"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </div>
             </article>
@@ -615,56 +533,28 @@ export default function Gallery() {
 
       <section className="rounded-[8px] border border-white/10 bg-brand-card p-5">
         <div className="mb-5">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-white">
-            <Film className="h-5 w-5 text-brand-gold" />
-            Home Video Section
-          </h2>
+          <h2 className="flex items-center gap-2 text-xl font-bold text-white"><Film className="h-5 w-5 text-brand-gold" />Home Video Section</h2>
           <p className="mt-1 text-xs text-gray-500">Paste embeddable YouTube or Vimeo links. No video files are uploaded.</p>
         </div>
 
         <form onSubmit={saveVideo} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-          <input
-            value={videoForm.url}
-            onChange={(e) => setVideoForm((prev) => ({ ...prev, url: e.target.value }))}
-            className={inputClass}
-            placeholder="https://www.youtube.com/watch?v=..."
-          />
-          <input
-            value={videoForm.title}
-            onChange={(e) => setVideoForm((prev) => ({ ...prev, title: e.target.value }))}
-            className={inputClass}
-            placeholder="Optional title"
-          />
-          <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500">
-            <LinkIcon className="h-4 w-4" />
-            Save Video
-          </button>
+          <input value={videoForm.url} onChange={(e) => setVideoForm((prev) => ({ ...prev, url: e.target.value }))} className={inputClass} placeholder="https://www.youtube.com/watch?v=..." />
+          <input value={videoForm.title} onChange={(e) => setVideoForm((prev) => ({ ...prev, title: e.target.value }))} className={inputClass} placeholder="Optional title" />
+          <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500"><LinkIcon className="h-4 w-4" />Save Video</button>
         </form>
         {videoError && <p className="mt-3 text-xs text-red-300">{videoError}</p>}
 
         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {videos.length === 0 && (
-            <div className="rounded-[8px] border border-dashed border-white/10 p-8 text-center text-xs text-gray-600 md:col-span-2 xl:col-span-3">
-              No home videos saved yet.
-            </div>
-          )}
+          {videos.length === 0 && <div className="rounded-[8px] border border-dashed border-white/10 p-8 text-center text-xs text-gray-600 md:col-span-2 xl:col-span-3">No home videos saved yet.</div>}
           {videos.map((video) => (
             <article key={video.id} className="overflow-hidden rounded-[8px] border border-white/10 bg-black/25">
-              <iframe
-                src={video.embedUrl}
-                title={video.title}
-                className="aspect-video w-full bg-black"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
+              <iframe src={video.embedUrl} title={video.title} className="aspect-video w-full bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
               <div className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-white">{video.title}</p>
                   <p className="mt-1 text-[10px] uppercase tracking-wider text-gray-600">{video.provider}</p>
                 </div>
-                <button onClick={() => deleteVideo(video)} className={iconAction("#ef4444")} title="Delete video">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <button onClick={() => deleteVideo(video)} className={iconAction("#ef4444")} title="Delete video"><Trash2 className="h-4 w-4" /></button>
               </div>
             </article>
           ))}

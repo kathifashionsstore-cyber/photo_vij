@@ -6,6 +6,7 @@ import {
   AlertCircle,
   CheckCircle,
   Eye,
+  FileText,
   Image as ImageIcon,
   Paintbrush,
   Save,
@@ -36,7 +37,7 @@ const HERO_DEFAULTS = {
   about: {
     heading: "Our Story - Passion Meets Perfection",
     subheading: "Meet Sonu and the crew behind Snaplica's cinematic wedding and event coverage.",
-    cta1Text: "Meet the Team",
+    cta1Text: "Read Our Story",
     cta1Url: "/about",
     cta2Text: "Book Now",
     cta2Url: "/booking",
@@ -128,6 +129,18 @@ export const SettingsPage = () => {
     borderRadius: "12",
   });
 
+  const [aboutForm, setAboutForm] = useState({
+    founderName: "Snaplica Sonu",
+    founderRole: "Founder & Creative Director",
+    founderImageUrl: "/images/founder.jpg",
+    eyebrow: "About Snaplica",
+    heading: "A Vijayawada studio built around emotional storytelling and reliable event coverage.",
+    story:
+      "Founded in 2017 by Mr. Sonu, Snaplica Photography grew from a personal love for preserving real moments into a full-service photography and filmmaking studio in Ibrahimpatnam, Vijayawada. The studio is known for wedding photography, cinematic videography, drone coverage, reels and social content, and warm documentary storytelling that keeps families, rituals, and atmosphere at the center of the frame.",
+    recognitions:
+      "Recognitions include Times Business Awards Andhra Pradesh honors, APCEI Best Photography recognition, JD Design Awards mentions, and Andhra Pradesh Event Excellence Awards appreciation for consistent creative work and client trust.",
+  });
+
   const [selectedHeroPage, setSelectedHeroPage] = useState("home");
   const [heroForm, setHeroForm] = useState(emptyHero("home"));
   const [uploadingHero, setUploadingHero] = useState(false);
@@ -146,13 +159,15 @@ export const SettingsPage = () => {
     const loadSettings = async () => {
       setLoading(true);
       try {
-        const [profileSnap, themeSnap] = await Promise.all([
+        const [profileSnap, themeSnap, aboutSnap] = await Promise.all([
           getDoc(doc(db, "settings", "profile")),
           getDoc(doc(db, "settings", "theme")),
+          getDoc(doc(db, "settings", "about")),
         ]);
 
         if (profileSnap.exists()) setProfileForm((prev) => ({ ...prev, ...profileSnap.data() }));
         if (themeSnap.exists()) setThemeForm((prev) => ({ ...prev, ...themeSnap.data() }));
+        if (aboutSnap.exists()) setAboutForm((prev) => ({ ...prev, ...aboutSnap.data() }));
       } catch (err) {
         console.error("Failed to load settings:", err);
         setErrorMsg("Failed to load settings from Firestore.");
@@ -220,6 +235,24 @@ export const SettingsPage = () => {
     } catch (err) {
       console.error(err);
       setErrorMsg("Failed to save theme settings.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveAbout = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      await setDoc(doc(db, "settings", "about"), {
+        ...aboutForm,
+        updatedAt: serverTimestamp(),
+      });
+      flashSuccess("About page content saved.");
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Failed to save about page content.");
     } finally {
       setLoading(false);
     }
@@ -293,6 +326,9 @@ export const SettingsPage = () => {
         </TabButton>
         <TabButton active={activeTab === "hero"} onClick={() => setActiveTab("hero")} icon={ImageIcon}>
           Hero Manager
+        </TabButton>
+        <TabButton active={activeTab === "about"} onClick={() => setActiveTab("about")} icon={FileText}>
+          About
         </TabButton>
       </div>
 
@@ -550,6 +586,36 @@ export const SettingsPage = () => {
             </div>
           )}
         </div>
+      )}
+
+      {activeTab === "about" && (
+        <form onSubmit={saveAbout} className="max-w-3xl space-y-5 rounded-3xl border border-white/5 bg-brand-card p-8">
+          <SectionTitle icon={FileText}>About Page Story</SectionTitle>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field label="Founder Name">
+              <input className={fieldClass} value={aboutForm.founderName} onChange={(e) => setAboutForm((prev) => ({ ...prev, founderName: e.target.value }))} />
+            </Field>
+            <Field label="Founder Role">
+              <input className={fieldClass} value={aboutForm.founderRole} onChange={(e) => setAboutForm((prev) => ({ ...prev, founderRole: e.target.value }))} />
+            </Field>
+          </div>
+          <Field label="Founder Image URL">
+            <input className={fieldClass} value={aboutForm.founderImageUrl} onChange={(e) => setAboutForm((prev) => ({ ...prev, founderImageUrl: e.target.value }))} />
+          </Field>
+          <Field label="Eyebrow">
+            <input className={fieldClass} value={aboutForm.eyebrow} onChange={(e) => setAboutForm((prev) => ({ ...prev, eyebrow: e.target.value }))} />
+          </Field>
+          <Field label="Heading">
+            <textarea rows={2} className={`${fieldClass} resize-none leading-6`} value={aboutForm.heading} onChange={(e) => setAboutForm((prev) => ({ ...prev, heading: e.target.value }))} />
+          </Field>
+          <Field label="Brand Story">
+            <textarea rows={7} className={`${fieldClass} resize-none leading-6`} value={aboutForm.story} onChange={(e) => setAboutForm((prev) => ({ ...prev, story: e.target.value }))} />
+          </Field>
+          <Field label="Recognitions">
+            <textarea rows={4} className={`${fieldClass} resize-none leading-6`} value={aboutForm.recognitions} onChange={(e) => setAboutForm((prev) => ({ ...prev, recognitions: e.target.value }))} />
+          </Field>
+          <SubmitButton loading={loading}>Save About Content</SubmitButton>
+        </form>
       )}
     </div>
   );

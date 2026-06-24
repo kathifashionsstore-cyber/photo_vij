@@ -7,15 +7,14 @@ export const globalSearch = async (searchQuery, tenantId = 'snaplica-main') => {
   const q = searchQuery.toLowerCase().trim();
 
   try {
-    const [clients, bookings, invoices, teams, equipment] = await Promise.all([
+    const [clients, bookings, invoices, equipment] = await Promise.all([
       searchClients(q, tenantId),
       searchBookings(q, tenantId),
       searchInvoices(q, tenantId),
-      searchTeams(q, tenantId),
       searchEquipment(q, tenantId)
     ]);
 
-    return { clients, bookings, invoices, teams, equipment };
+    return { clients, bookings, invoices, equipment };
   } catch (err) {
     console.error("Search engine failed:", err);
     // Return mock data for local testing if Firestore fails or is empty
@@ -73,21 +72,6 @@ const searchInvoices = async (q, tenantId) => {
   return results.slice(0, 5);
 };
 
-const searchTeams = async (q, tenantId) => {
-  const collRef = collection(db, 'teams');
-  const snap = await getDocs(query(collRef, limit(20)));
-  const results = [];
-  snap.forEach(doc => {
-    const data = doc.data();
-    const name = data.name || '';
-    const role = data.role || '';
-    if (name.toLowerCase().includes(q) || role.toLowerCase().includes(q)) {
-      results.push({ id: doc.id, ...data });
-    }
-  });
-  return results.slice(0, 5);
-};
-
 const searchEquipment = async (q, tenantId) => {
   const collRef = collection(db, 'equipment');
   const snap = await getDocs(query(collRef, limit(20)));
@@ -119,15 +103,10 @@ const getMockSearchResults = (q) => {
     { id: "i2", invoiceNumber: "INV-2026-002", clientName: "Harini Chawla", status: "ready" }
   ].filter(i => i.invoiceNumber.toLowerCase().includes(q) || i.clientName.toLowerCase().includes(q));
 
-  const mockTeams = [
-    { id: "t1", name: "Team Alfa", leader: "Prasad Rao", members: 5, status: "active" },
-    { id: "t2", name: "Team Beta", leader: "Kavya Murthy", members: 4, status: "idle" }
-  ].filter(t => t.name.toLowerCase().includes(q) || t.leader.toLowerCase().includes(q));
-
   const mockEquipment = [
     { id: "e1", name: "Sony A7SIII", model: "Body-001", type: "camera", status: "assigned" },
     { id: "e2", name: "DJI Mavic 3 Pro", model: "Drone-002", type: "drone", status: "available" }
   ].filter(e => e.name.toLowerCase().includes(q) || e.model.toLowerCase().includes(q));
 
-  return { clients: mockClients, bookings: mockBookings, invoices: mockInvoices, teams: mockTeams, equipment: mockEquipment };
+  return { clients: mockClients, bookings: mockBookings, invoices: mockInvoices, equipment: mockEquipment };
 };

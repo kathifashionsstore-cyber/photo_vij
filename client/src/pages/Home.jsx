@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Camera, Calendar, Heart, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Camera, Calendar, Heart, ShieldCheck, Trophy } from "lucide-react";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import HeroSection from "../components/HeroSection";
@@ -12,22 +12,22 @@ import { db } from "../firebase";
 export const Home = () => {
   const stats = [
     { value: 1000, suffix: "+", label: "Events Covered", icon: Camera },
-    { value: 36, suffix: "", label: "Team Members", icon: Users },
     { value: 5, suffix: "+", label: "Years Experience", icon: Calendar },
     { value: 2, suffix: "x", label: "Award Winner", icon: Trophy },
+    { value: 10, suffix: "+", label: "Service Categories", icon: ShieldCheck },
   ];
 
   const features = [
-    { title: "Founder-Led Planning", desc: "Every inquiry is reviewed with creative intent, scheduling clarity, and crew fit in mind.", icon: Heart },
-    { title: "Dedicated Operations", desc: "Bookings, teams, galleries, and communication are tracked from a single admin workflow.", icon: ShieldCheck },
-    { title: "Large Event Ready", desc: "Specialists can be scheduled for multiple rituals, stages, locations, and parallel moments.", icon: Users },
+    { title: "Founder-Led Planning", desc: "Every inquiry is reviewed with creative intent, scheduling clarity, and the right production plan in mind.", icon: Heart },
+    { title: "Dedicated Operations", desc: "Bookings, galleries, and communication are tracked from a single admin workflow.", icon: ShieldCheck },
+    { title: "Large Event Ready", desc: "Coverage can be planned for multiple rituals, stages, locations, and parallel moments.", icon: Camera },
   ];
 
   return (
     <div className="overflow-hidden bg-brand-dark pb-16">
       <SEOHead
         title="Home"
-        description="Snaplica Photography in Vijayawada captures weddings, events, portraits, products, reels, and drone stories with a founder-led team."
+        description="Snaplica Photography in Vijayawada captures weddings, events, portraits, products, reels, and drone stories with a founder-led studio."
       />
 
       <HeroSection pageId="home" />
@@ -61,7 +61,7 @@ export const Home = () => {
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">Meet The Founder</span>
             <h2 className="mt-3 text-3xl font-bold text-white md:text-5xl">Sonu built Snaplica around care, craft, and consistency.</h2>
             <p className="mt-5 text-sm leading-8 text-gray-400">
-              Snaplica started as one photographer's promise to preserve important days with honesty. Today it is a full team operation that still keeps that personal attention at the center of every shoot.
+              Snaplica started as one photographer's promise to preserve important days with honesty. Today it is a complete studio workflow that still keeps that personal attention at the center of every shoot.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link to="/portfolio" className="rounded-full bg-brand-gold px-6 py-3 text-xs font-bold uppercase tracking-wider text-black transition-colors hover:bg-amber-500">

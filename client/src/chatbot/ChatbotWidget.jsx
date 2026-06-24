@@ -57,7 +57,7 @@ export const ChatbotWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-24 md:bottom-6 right-6 z-[9000] pointer-events-auto">
+    <div className="fixed bottom-[calc(7.75rem+env(safe-area-inset-bottom,0px))] right-4 z-[9010] pointer-events-auto md:bottom-6 md:right-6">
       {/* Floating Toggle Button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
@@ -77,7 +77,7 @@ export const ChatbotWidget = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            className="absolute bottom-16 right-0 w-80 md:w-96 h-[450px] bg-[#0F1117] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="absolute bottom-20 right-0 h-[min(450px,calc(100vh-11rem))] w-[min(20rem,calc(100vw-2rem))] bg-[#0F1117] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden md:w-96"
           >
             {/* Chat header */}
             <div className="bg-black/40 border-b border-white/5 px-4 py-4 flex items-center gap-2.5">

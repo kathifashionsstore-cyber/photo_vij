@@ -70,7 +70,7 @@ export const BookingSuccess = () => {
             {[
               'Request received',
               'Admin reviews within 24 hrs',
-              'Team calls to confirm',
+              'Studio calls to confirm',
               'Advance payment',
               'Event confirmed',
             ].map((step, index) => (

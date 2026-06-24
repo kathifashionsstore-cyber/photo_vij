@@ -9,6 +9,16 @@ const MANDATORY = {
   mandatory: true,
 };
 
+const isCurrent = (item) => {
+  const today = new Date().toISOString().split("T")[0];
+  const startsAt = item.startsAt || item.startDate;
+  const endsAt = item.endsAt || item.endDate;
+  if ((item.active === false || item.isActive === false || item.enabled === false) && !item.mandatory) return false;
+  if (startsAt && startsAt > today) return false;
+  if (endsAt && endsAt < today) return false;
+  return Boolean(item.text || item.title);
+};
+
 export default function AnnouncementTicker() {
   const [adminItems, setAdminItems] = useState([]);
   const [index, setIndex] = useState(0);
@@ -20,7 +30,7 @@ export default function AnnouncementTicker() {
       (snap) => {
         const items = snap.docs
           .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((item) => item.active !== false && item.isActive !== false && item.text);
+          .filter(isCurrent);
         setAdminItems(items);
       },
       (err) => console.error("Announcement listener failed:", err),

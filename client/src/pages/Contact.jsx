@@ -60,7 +60,7 @@ export const Contact = () => {
   return (
     <div className="bg-brand-dark overflow-hidden pb-24">
       <SEOHead 
-        title="Contact Sonu & Crew" 
+        title="Contact Snaplica"
         description="Get in touch with Snaplica Photography based in Ibrahimpatnam, Vijayawada. Call 9494387387 to secure your dates." 
       />
 

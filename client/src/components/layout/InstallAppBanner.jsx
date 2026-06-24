@@ -37,7 +37,7 @@ export default function InstallAppBanner() {
   return (
     <>
       {visible && (
-        <div className="fixed bottom-20 left-1/2 z-[9997] w-[min(calc(100vw-120px),360px)] -translate-x-1/2 rounded-[8px] border border-brand-gold/30 bg-[#0f0f12] p-3 shadow-2xl shadow-black/70 md:bottom-6 md:left-auto md:right-6 md:w-full md:max-w-md md:translate-x-0">
+        <div className="fixed bottom-[calc(13.75rem+env(safe-area-inset-bottom,0px))] left-1/2 z-[9997] w-[min(calc(100vw-120px),360px)] -translate-x-1/2 rounded-[8px] border border-brand-gold/30 bg-[#0f0f12] p-3 shadow-2xl shadow-black/70 md:bottom-6 md:left-auto md:right-6 md:w-full md:max-w-md md:translate-x-0">
           <div className="flex items-center gap-3">
             <img src="/logo192.png" alt="Snaplica" className="h-10 w-10 rounded-[8px]" />
             <div className="min-w-0 flex-1">
@@ -57,7 +57,7 @@ export default function InstallAppBanner() {
       <a
         href={APK_DOWNLOAD_URL}
         download
-        className="fixed bottom-36 left-1/2 z-[9996] flex min-h-11 -translate-x-1/2 items-center justify-center gap-2 rounded-full border border-brand-gold/30 bg-brand-gold px-4 py-3 text-xs font-bold uppercase tracking-wider text-black shadow-2xl shadow-black/50 transition-colors hover:bg-amber-500 md:bottom-6 md:left-6 md:translate-x-0"
+        className="fixed bottom-[calc(7.75rem+env(safe-area-inset-bottom,0px))] left-1/2 z-[9010] flex min-h-11 -translate-x-1/2 items-center justify-center gap-2 rounded-full border border-brand-gold/30 bg-brand-gold px-4 py-3 text-xs font-bold uppercase tracking-wider text-black shadow-2xl shadow-black/50 transition-colors hover:bg-amber-500 md:bottom-6 md:left-6 md:translate-x-0"
         title="Download Android APK"
       >
         <Download className="h-4 w-4" />

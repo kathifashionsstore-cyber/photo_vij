@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle, MessageCircle } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 import HeroSection from "../components/HeroSection";
 import SEOHead from "../components/SEOHead";
 import { SERVICES } from "../data/services";
@@ -19,23 +19,21 @@ export const Services = () => {
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">Services</span>
           <h1 className="mt-3 text-3xl font-bold text-white md:text-5xl">Choose the kind of story you want captured.</h1>
           <p className="mt-5 text-sm leading-8 text-gray-400">
-            Every service starts with date availability, venue requirements, crew planning, and creative direction from the Snaplica team.
+            Every service starts with date availability, venue requirements, production planning, and creative direction from Snaplica.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((service) => (
-            <Link key={service.id} to={`/services/${service.id}`} className="group overflow-hidden rounded-[8px] border border-white/10 bg-brand-card no-underline transition-transform duration-300 hover:-translate-y-1">
-              <div className="aspect-[4/3] overflow-hidden">
-                <img src={service.image} alt={service.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+        <div className="divide-y divide-white/10">
+          {SERVICES.map((service, index) => (
+            <Link key={service.id} to={`/services/${service.id}`} className="group grid gap-4 py-6 no-underline transition-colors hover:bg-white/[0.025] md:grid-cols-[90px_1fr_auto] md:items-center">
+              <span className="font-serif text-3xl text-brand-gold/60 md:text-4xl">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h2 className="text-2xl font-bold text-white transition-colors group-hover:text-brand-gold md:text-3xl">{service.title}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-gray-500">{service.summary}</p>
               </div>
-              <div className="p-5">
-                <h2 className="text-xl font-bold text-white">{service.title}</h2>
-                <p className="mt-3 min-h-[54px] text-sm leading-6 text-gray-500">{service.summary}</p>
-                <span className="mt-5 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-gold">
-                  View Gallery <ArrowRight className="h-4 w-4" />
-                </span>
-              </div>
+              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-gold">
+                View Detail <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
             </Link>
           ))}
         </div>
@@ -46,9 +44,9 @@ export const Services = () => {
           <div>
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">How We Work</span>
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {["Discuss service type", "Verify team availability", "Schedule and confirm"].map((step) => (
-                <div key={step} className="flex items-center gap-3 rounded-[8px] border border-white/10 bg-brand-card/60 p-4">
-                  <CheckCircle className="h-5 w-5 text-brand-gold" />
+              {["Discuss service type", "Verify date availability", "Schedule and confirm"].map((step, index) => (
+                <div key={step} className="flex items-baseline gap-3">
+                  <span className="font-serif text-xl text-brand-gold">{index + 1}</span>
                   <span className="text-sm font-semibold text-white">{step}</span>
                 </div>
               ))}

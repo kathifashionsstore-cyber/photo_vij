@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { Award, Camera, HeartHandshake, Sparkles, Trophy, Users } from "lucide-react";
+import { Award, Camera, HeartHandshake, Sparkles, Trophy } from "lucide-react";
 import HeroSection from "../components/HeroSection";
 import SEOHead from "../components/SEOHead";
 import { db } from "../firebase";
@@ -8,17 +8,10 @@ import { SERVICES, SERVICE_LABELS } from "../data/services";
 
 const timeline = [
   { year: "2019", title: "The First Step", text: "Sonu began with a camera, local trust, and a clear promise to respect every family moment." },
-  { year: "2021", title: "Growing Team", text: "Snaplica expanded into a multi-role crew for photography, video, drone, and operations." },
+  { year: "2021", title: "Growing Studio", text: "Snaplica expanded its workflow across photography, video, drone, and event operations." },
   { year: "2024", title: "Recognized Craft", text: "The studio earned wider recognition for consistent wedding and event coverage across Andhra Pradesh." },
-  { year: "2026", title: "Full Workflow Studio", text: "Bookings, teams, galleries, and client communication now run through a connected studio system." },
+  { year: "2026", title: "Full Workflow Studio", text: "Bookings, galleries, and client communication now run through a connected studio system." },
 ];
-
-const teamMembers = Array.from({ length: 36 }, (_, index) => ({
-  id: index + 1,
-  name: `Snaplica Member ${index + 1}`,
-  role: ["Photographer", "Cinematographer", "Editor", "Drone Pilot", "Coordinator", "Lighting Crew"][index % 6],
-  image: `/images/team/member-${index + 1}.jpg`,
-}));
 
 export const Portfolio = () => {
   const [gallery, setGallery] = useState([]);
@@ -38,7 +31,6 @@ export const Portfolio = () => {
   }, []);
 
   const founderImages = gallery.filter((item) => item.category === "founder");
-  const teamGallery = gallery.filter((item) => item.category === "team");
   const workGallery = gallery.filter((item) => SERVICES.some((service) => service.id === item.category));
   const filteredWork = useMemo(
     () => activeCategory === "all" ? workGallery : workGallery.filter((item) => item.category === activeCategory),
@@ -46,10 +38,6 @@ export const Portfolio = () => {
   );
 
   const displayedFounder = founderImages[0]?.imageUrl || founderImages[0]?.url || "/images/founder.jpg";
-  const displayedTeamMembers = teamGallery.length > 0
-    ? teamMembers.map((member, index) => ({ ...member, image: teamGallery[index % teamGallery.length]?.imageUrl || teamGallery[index % teamGallery.length]?.url || member.image }))
-    : teamMembers;
-
   const fallbackWork = SERVICES.slice(0, 9).map((service) => ({
     id: service.id,
     category: service.id,
@@ -62,7 +50,7 @@ export const Portfolio = () => {
     <div className="overflow-hidden bg-brand-dark pb-20">
       <SEOHead
         title="Portfolio"
-        description="Meet founder Sonu, the Snaplica team, the studio story, awards, helping hands, and public work galleries."
+        description="Meet founder Sonu, the Snaplica studio story, awards, helping hands, and public work galleries."
       />
 
       <HeroSection pageId="portfolio" />
@@ -75,12 +63,12 @@ export const Portfolio = () => {
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">Founder Intro</span>
           <h1 className="mt-3 text-3xl font-bold text-white md:text-5xl">Sonu, the heart behind Snaplica Photography.</h1>
           <p className="mt-5 text-sm leading-8 text-gray-400">
-            Snaplica is built on a simple belief: photography should make people feel remembered, not staged. Sonu shaped the studio around patience, kindness, and a strong crew culture so every event feels cared for from the first call to final delivery.
+            Snaplica is built on a simple belief: photography should make people feel remembered, not staged. Sonu shaped the studio around patience, kindness, and a thoughtful creative process so every event feels cared for from the first call to final delivery.
           </p>
           <div className="mt-8 grid grid-cols-3 gap-4">
             {[
               ["5+", "Years"],
-              ["36", "Team"],
+              ["10+", "Services"],
               ["1000+", "Events"],
             ].map(([value, label]) => (
               <div key={label} className="rounded-[8px] border border-white/10 bg-black/25 p-4 text-center">
@@ -99,7 +87,7 @@ export const Portfolio = () => {
             <h2 className="mt-3 text-3xl font-bold text-white md:text-5xl">A studio that treats events like family memory.</h2>
           </div>
           <p className="text-sm leading-8 text-gray-400">
-            The team is trained to notice the small things: a parent waiting quietly near the stage, a child laughing between rituals, a product's exact texture under light, or the way a venue looks from above. That attention is why clients return to Snaplica for every new chapter.
+            Snaplica is shaped around noticing the small things: a parent waiting quietly near the stage, a child laughing between rituals, a product's exact texture under light, or the way a venue looks from above. That attention is why clients return for every new chapter.
           </p>
         </div>
       </section>
@@ -120,30 +108,9 @@ export const Portfolio = () => {
         </div>
       </section>
 
-      <section className="border-y border-white/5 bg-black/30 py-20">
-        <div className="mx-auto max-w-7xl px-6 md:px-12">
-          <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">Team Of 36</span>
-              <h2 className="mt-3 text-3xl font-bold text-white">The people behind the coverage.</h2>
-            </div>
-            <Users className="h-10 w-10 text-brand-gold" />
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {displayedTeamMembers.map((member) => (
-              <div key={member.id} className="rounded-[8px] border border-white/10 bg-brand-card p-3">
-                <img src={member.image} alt={member.name} className="aspect-square w-full rounded-[8px] object-cover" />
-                <h3 className="mt-3 text-sm font-bold text-white">{member.name}</h3>
-                <p className="mt-1 text-[11px] text-gray-500">{member.role}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-20 md:grid-cols-3 md:px-12">
         {[
-          { icon: HeartHandshake, title: "Helping Hands", text: "The crew supports families through schedules, rituals, movement, and calm coordination." },
+          { icon: HeartHandshake, title: "Helping Hands", text: "Snaplica supports families through schedules, rituals, movement, and calm coordination." },
           { icon: Award, title: "Awards", text: "Snaplica has been recognized for photography excellence and trusted event delivery." },
           { icon: Trophy, title: "Studio Craft", text: "Every public gallery image can be curated from the admin gallery with clear visibility control." },
         ].map((item) => {
