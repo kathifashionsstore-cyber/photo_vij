@@ -139,6 +139,10 @@ export const SettingsPage = () => {
       "Founded in 2017 by Mr. Sonu, Snaplica Photography grew from a personal love for preserving real moments into a full-service photography and filmmaking studio in Ibrahimpatnam, Vijayawada. The studio is known for wedding photography, cinematic videography, drone coverage, reels and social content, and warm documentary storytelling that keeps families, rituals, and atmosphere at the center of the frame.",
     recognitions:
       "Recognitions include Times Business Awards Andhra Pradesh honors, APCEI Best Photography recognition, JD Design Awards mentions, and Andhra Pradesh Event Excellence Awards appreciation for consistent creative work and client trust.",
+    awardsEyebrow: "Recognitions",
+    awardsHeading: "Our Recognitions & Awards",
+    awardsIntro:
+      "Since our journey began in 2021, we have earned recognition across photography, cinematography, drone visuals, wedding storytelling, and creative content. Every award reflects the trust our clients place in us.",
   });
 
   const [selectedHeroPage, setSelectedHeroPage] = useState("home");
@@ -613,6 +617,18 @@ export const SettingsPage = () => {
           </Field>
           <Field label="Recognitions">
             <textarea rows={4} className={`${fieldClass} resize-none leading-6`} value={aboutForm.recognitions} onChange={(e) => setAboutForm((prev) => ({ ...prev, recognitions: e.target.value }))} />
+          </Field>
+          <div className="border-t border-white/5 pt-5">
+            <SectionTitle icon={FileText}>Awards Section</SectionTitle>
+          </div>
+          <Field label="Awards Eyebrow">
+            <input className={fieldClass} value={aboutForm.awardsEyebrow} onChange={(e) => setAboutForm((prev) => ({ ...prev, awardsEyebrow: e.target.value }))} />
+          </Field>
+          <Field label="Awards Heading">
+            <textarea rows={2} className={`${fieldClass} resize-none leading-6`} value={aboutForm.awardsHeading} onChange={(e) => setAboutForm((prev) => ({ ...prev, awardsHeading: e.target.value }))} />
+          </Field>
+          <Field label="Awards Intro">
+            <textarea rows={4} className={`${fieldClass} resize-none leading-6`} value={aboutForm.awardsIntro} onChange={(e) => setAboutForm((prev) => ({ ...prev, awardsIntro: e.target.value }))} />
           </Field>
           <SubmitButton loading={loading}>Save About Content</SubmitButton>
         </form>
