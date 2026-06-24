@@ -1,8 +1,22 @@
+import { lazy, Suspense } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import HeroSection from "../components/HeroSection";
 import SEOHead from "../components/SEOHead";
-import BookingForm from "../components/BookingForm";
 import { getServiceById } from "../data/services";
+
+const BookingForm = lazy(() => import("../components/BookingForm"));
+
+const BookingFormFallback = () => (
+  <div className="glass-card min-h-[520px] rounded-[8px] border border-white/10 p-5 md:p-7">
+    <div className="h-3 w-28 rounded-full bg-brand-gold/30" />
+    <div className="mt-4 h-8 w-3/4 rounded bg-white/10" />
+    <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="h-12 rounded-[8px] bg-white/[0.06]" />
+      ))}
+    </div>
+  </div>
+);
 
 export const Booking = () => {
   const navigate = useNavigate();
@@ -37,11 +51,13 @@ export const Booking = () => {
           </div>
         </aside>
 
-        <BookingForm
-          defaultServiceId={service?.id || "wedding"}
-          source="booking_page"
-          onSuccess={(booking) => navigate(`/booking/success?ref=${encodeURIComponent(booking.bookingRef)}`, { state: { bookingRef: booking.bookingRef, booking } })}
-        />
+        <Suspense fallback={<BookingFormFallback />}>
+          <BookingForm
+            defaultServiceId={service?.id || "wedding"}
+            source="booking_page"
+            onSuccess={(booking) => navigate(`/booking/success?ref=${encodeURIComponent(booking.bookingRef)}`, { state: { bookingRef: booking.bookingRef, booking } })}
+          />
+        </Suspense>
       </section>
     </div>
   );

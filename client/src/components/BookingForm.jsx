@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { addDoc, collection, doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { CalendarCheck, Download, MessageCircle, Phone, Send } from "lucide-react";
-import { jsPDF } from "jspdf";
 import { db } from "../firebase";
 import { SERVICES, getServiceById } from "../data/services";
 import { normalizePhone } from "../utils/whatsapp";
@@ -43,7 +42,8 @@ const initialForm = (defaultServiceId) => ({
   notes: "",
 });
 
-const downloadReceipt = (booking) => {
+const downloadReceipt = async (booking) => {
+  const { jsPDF } = await import("jspdf");
   const service = getServiceById(booking.serviceType)?.title || booking.serviceType;
   const docPdf = new jsPDF();
 
@@ -184,7 +184,7 @@ export default function BookingForm({ defaultServiceId = "wedding", source = "we
         updatedAt: serverTimestamp(),
       }).catch((err) => console.warn("Lead mirror skipped:", err));
 
-      downloadReceipt(savedBooking);
+      await downloadReceipt(savedBooking);
       window.open(adminWhatsAppUrl(savedBooking), "_blank");
       setLastRef(bookingRef);
       setForm(initialForm(defaultServiceId));

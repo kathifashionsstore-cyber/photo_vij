@@ -28,7 +28,17 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/',
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,jpg,jpeg}']
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+        globIgnores: [
+          'images/**',
+          'services/**',
+          'awards/**',
+          'audio/**',
+          'videos/**',
+          '**/*.jpg',
+          '**/*.jpeg'
+        ]
       },
       devOptions: {
         enabled: true
@@ -44,6 +54,33 @@ export default defineConfig({
         target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false
+      }
+    }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalizedId = id.replace(/\\/g, '/');
+          if (!normalizedId.includes('node_modules')) return undefined;
+          if (normalizedId.includes('node_modules/@fullcalendar/')) return 'vendor-calendar';
+          if (normalizedId.includes('node_modules/recharts') || normalizedId.includes('node_modules/d3-')) return 'vendor-charts';
+          if (normalizedId.includes('node_modules/jspdf')) return 'vendor-jspdf';
+          if (normalizedId.includes('node_modules/html2canvas')) return 'vendor-html2canvas';
+          if (normalizedId.includes('node_modules/dompurify')) return 'vendor-dompurify';
+          if (normalizedId.includes('node_modules/firebase') || normalizedId.includes('node_modules/@firebase')) return 'vendor-firebase';
+          if (normalizedId.includes('node_modules/framer-motion')) return 'vendor-motion';
+          if (normalizedId.includes('node_modules/lucide-react')) return 'vendor-icons';
+          if (
+            normalizedId.includes('node_modules/react/') ||
+            normalizedId.includes('node_modules/react-dom/') ||
+            normalizedId.includes('node_modules/react-router') ||
+            normalizedId.includes('node_modules/scheduler/')
+          ) {
+            return 'vendor-react';
+          }
+          return undefined;
+        }
       }
     }
   }

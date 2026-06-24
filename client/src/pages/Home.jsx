@@ -1,13 +1,26 @@
 import { Link } from "react-router-dom";
 import { Camera, Calendar, Heart, ShieldCheck, Trophy } from "lucide-react";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import HeroSection from "../components/HeroSection";
 import AnimatedCounter from "../components/ui/AnimatedCounter";
 import SEOHead from "../components/SEOHead";
 import GoogleReviews from "../components/GoogleReviews";
-import BookingForm from "../components/BookingForm";
 import { db } from "../firebase";
+
+const BookingForm = lazy(() => import("../components/BookingForm"));
+
+const BookingFormFallback = () => (
+  <div className="glass-card min-h-[520px] rounded-[8px] border border-white/10 p-5 md:p-7">
+    <div className="h-3 w-28 rounded-full bg-brand-gold/30" />
+    <div className="mt-4 h-8 w-3/4 rounded bg-white/10" />
+    <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+      {Array.from({ length: 8 }).map((_, index) => (
+        <div key={index} className="h-12 rounded-[8px] bg-white/[0.06]" />
+      ))}
+    </div>
+  </div>
+);
 
 export const Home = () => {
   const stats = [
@@ -95,7 +108,9 @@ export const Home = () => {
             Your request is saved to the admin bookings list, a receipt PDF is downloaded, and the studio WhatsApp draft opens with the full brief.
           </p>
         </div>
-        <BookingForm source="home" />
+        <Suspense fallback={<BookingFormFallback />}>
+          <BookingForm source="home" />
+        </Suspense>
       </section>
 
       <GoogleReviews dark />

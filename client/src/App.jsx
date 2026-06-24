@@ -7,12 +7,8 @@ import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import MobileBottomNav from "./components/layout/MobileBottomNav";
 import AnnouncementTicker from "./components/layout/AnnouncementTicker";
-import FestivalBannerModal from "./components/layout/FestivalBannerModal";
-import InstallAppBanner from "./components/layout/InstallAppBanner";
 import { LeftSocialBar, RightSocialBar } from "./components/layout/FloatingSocialBar";
 import { NAVBAR_HEIGHT } from "./components/layout/layoutConstants";
-import ChatbotWidget from "./chatbot/ChatbotWidget";
-import SearchOverlay from "./search/SearchOverlay";
 import { collection, getDocs, serverTimestamp, writeBatch } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -29,6 +25,10 @@ const Portfolio = lazy(() => import("./pages/Portfolio"));
 const Booking   = lazy(() => import("./pages/Booking"));   // PUBLIC booking FORM
 const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
 const Contact   = lazy(() => import("./pages/Contact"));
+const ChatbotWidget = lazy(() => import("./chatbot/ChatbotWidget"));
+const SearchOverlay = lazy(() => import("./search/SearchOverlay"));
+const FestivalBannerModal = lazy(() => import("./components/layout/FestivalBannerModal"));
+const InstallAppBanner = lazy(() => import("./components/layout/InstallAppBanner"));
 
 // Admin login (public)
 const AdminLogin = lazy(() => import("./pages/admin/Login"));
@@ -83,11 +83,15 @@ const PublicLayout = ({ children }) => {
       <Footer />
       <LeftSocialBar />
       <RightSocialBar />
-      <FestivalBannerModal />
-      <InstallAppBanner />
+      <Suspense fallback={null}>
+        <FestivalBannerModal />
+        <InstallAppBanner />
+      </Suspense>
       <MobileBottomNav />
-      <ChatbotWidget />
-      {isSearchOpen && <SearchOverlay onClose={() => setIsSearchOpen(false)} />}
+      <Suspense fallback={null}>
+        <ChatbotWidget />
+        {isSearchOpen && <SearchOverlay onClose={() => setIsSearchOpen(false)} />}
+      </Suspense>
     </div>
   );
 };
