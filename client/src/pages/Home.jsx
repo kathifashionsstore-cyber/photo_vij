@@ -6,6 +6,8 @@ import HeroSection from "../components/HeroSection";
 import AnimatedCounter from "../components/ui/AnimatedCounter";
 import SEOHead from "../components/SEOHead";
 import GoogleReviews from "../components/GoogleReviews";
+import GoogleDriveNotice from "../components/GoogleDriveNotice";
+import LocalStoriesSection from "../components/LocalStoriesSection";
 import { db } from "../firebase";
 
 const BookingForm = lazy(() => import("../components/BookingForm"));
@@ -27,7 +29,7 @@ export const Home = () => {
     { value: 1000, suffix: "+", label: "Events Covered", icon: Camera },
     { value: 5, suffix: "+", label: "Years Experience", icon: Calendar },
     { value: 2, suffix: "x", label: "Award Winner", icon: Trophy },
-    { value: 10, suffix: "+", label: "Service Categories", icon: ShieldCheck },
+    { value: 12, suffix: "", label: "Service Categories", icon: ShieldCheck },
   ];
 
   const features = [
@@ -40,13 +42,14 @@ export const Home = () => {
     <div className="overflow-hidden bg-brand-dark pb-16">
       <SEOHead
         title="Home"
-        description="Snaplica Photography in Vijayawada captures weddings, events, portraits, products, reels, and drone stories with a founder-led studio."
+        description="Snaplica Photography in Vijayawada captures weddings, engagements, maternity, corporate events, jewellery ads, and family milestones with a founder-led studio."
       />
 
       <HeroSection pageId="home" />
 
       <HomeHighlightsSection />
-      <HomeVideosSection />
+      <LocalStoriesSection />
+      <GoogleDriveNotice />
 
       <section className="border-y border-white/5 bg-black/50 py-12">
         <div className="mx-auto max-w-7xl px-6 md:px-12">
@@ -160,48 +163,6 @@ const HomeHighlightsSection = () => {
                   {photo.caption}
                 </p>
               )}
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-const HomeVideosSection = () => {
-  const [videos, setVideos] = useState([]);
-
-  useEffect(() => {
-    const unsub = onSnapshot(
-      query(collection(db, "homeVideos"), orderBy("order", "asc")),
-      (snap) => setVideos(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })).filter((item) => item.active !== false)),
-      (err) => console.error("Home videos listener failed:", err),
-    );
-    return unsub;
-  }, []);
-
-  if (videos.length === 0) return null;
-
-  return (
-    <section className="border-y border-white/5 bg-black px-6 py-16 md:px-12">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-8">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-gold">Films</span>
-          <h2 className="mt-3 text-3xl font-bold text-white md:text-5xl">Featured Video Stories</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {videos.map((video) => (
-            <article key={video.id} className="overflow-hidden rounded-[8px] border border-white/10 bg-[#0f0f12]">
-              <iframe
-                src={video.embedUrl}
-                title={video.title}
-                className="aspect-video w-full bg-black"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-              <div className="border-t border-white/10 p-4">
-                <h3 className="text-base font-bold text-white">{video.title}</h3>
-              </div>
             </article>
           ))}
         </div>

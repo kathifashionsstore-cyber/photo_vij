@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { db } from "../../firebase";
 import { buildTeamAssignmentWhatsApp } from "../../utils/whatsapp";
+import { SERVICES } from "../../data/services";
 
 const gold = "#c9a227";
 
@@ -57,7 +58,7 @@ const EMPTY_ASSIGN = {
   notes: "",
 };
 
-const eventTypes = ["Wedding", "Pre-Wedding", "Birthday", "Corporate", "Product Shoot", "Baby Shoot", "Other"];
+const eventTypes = SERVICES.map((service) => service.label);
 
 const daysLeft = (endDate) => {
   const diff = new Date(`${endDate}T00:00:00`) - new Date(`${today()}T00:00:00`);

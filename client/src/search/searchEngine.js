@@ -95,7 +95,7 @@ const getMockSearchResults = (q) => {
 
   const mockBookings = [
     { id: "b1", clientName: "Rahul Verma", serviceType: "wedding", eventDate: "2026-07-15", status: "pending" },
-    { id: "b2", clientName: "Harini Chawla", serviceType: "pre-wedding", eventDate: "2026-08-20", status: "approved" }
+    { id: "b2", clientName: "Harini Chawla", serviceType: "pre-post-wedding", eventDate: "2026-08-20", status: "approved" }
   ].filter(b => b.clientName.toLowerCase().includes(q) || b.serviceType.toLowerCase().includes(q));
 
   const mockInvoices = [

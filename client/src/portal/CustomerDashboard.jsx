@@ -20,7 +20,7 @@ export const CustomerDashboard = () => {
           clientName: "Rahul Verma",
           clientPhone: "9876543210",
           clientEmail: "rahul@example.com",
-          serviceType: "Wedding Photography",
+          serviceType: "Wedding",
           eventDate: "2026-07-15",
           venueAddress: "A-Convention Hall, Vijayawada",
           status: "approved",

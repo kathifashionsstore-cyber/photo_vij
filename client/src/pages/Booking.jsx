@@ -28,7 +28,7 @@ export const Booking = () => {
     <div className="overflow-hidden bg-brand-dark pb-24">
       <SEOHead
         title="Book A Shoot"
-        description="Book wedding, event, portrait, product, reels, or drone photography with Snaplica Photography Vijayawada."
+        description="Book engagement, wedding, birthday, maternity, corporate event, graduation, anniversary, retirement, or jewellery ad photography with Snaplica Photography Vijayawada."
       />
 
       <HeroSection pageId="booking" />

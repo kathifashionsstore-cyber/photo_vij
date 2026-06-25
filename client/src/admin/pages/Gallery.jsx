@@ -8,31 +8,17 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
   updateDoc,
 } from "firebase/firestore";
-import {
-  ArrowDown,
-  ArrowUp,
-  Eye,
-  EyeOff,
-  Film,
-  Link as LinkIcon,
-  Loader2,
-  RefreshCcw,
-  Save,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Eye, EyeOff, Loader2, RefreshCcw, Trash2, Upload } from "lucide-react";
 import { auth, db } from "../../firebase";
 import { SERVICES, SERVICE_LABELS } from "../../data/services";
 import { compressAndUploadImage } from "../../utils/imageUpload";
-import { toEmbeddableVideo } from "../../utils/videoLinks";
 
-const CATEGORY_OPTIONS = SERVICES.map((service) => ({ id: service.id, label: service.title }));
+const ALBUM_OPTIONS = SERVICES.map((service) => ({ id: service.id, label: service.label }));
 
 const categoryLabel = (category) =>
-  CATEGORY_OPTIONS.find((item) => item.id === category)?.label || SERVICE_LABELS[category] || category || "Uncategorized";
+  ALBUM_OPTIONS.find((item) => item.id === category)?.label || SERVICE_LABELS[category] || category || "Uncategorized";
 
 const describePhoto = (fileName, category) => {
   const cleanName = fileName
@@ -47,88 +33,37 @@ const describePhoto = (fileName, category) => {
 
 export default function Gallery() {
   const fileInputRef = useRef(null);
-  const servicePhotoInputRef = useRef(null);
-  const highlightInputRef = useRef(null);
   const [photos, setPhotos] = useState([]);
-  const [serviceContent, setServiceContent] = useState({});
-  const [highlights, setHighlights] = useState([]);
-  const [videos, setVideos] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(CATEGORY_OPTIONS[0]?.id || "wedding");
-  const [selectedServiceId, setSelectedServiceId] = useState(CATEGORY_OPTIONS[0]?.id || "wedding");
-  const [serviceForm, setServiceForm] = useState({ photoUrl: "", description: "" });
-  const [servicePhotoUploading, setServicePhotoUploading] = useState(false);
+  const [selectedAlbum, setSelectedAlbum] = useState(ALBUM_OPTIONS[0]?.id || "engagement");
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadStatuses, setUploadStatuses] = useState([]);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [draftDescriptions, setDraftDescriptions] = useState({});
-  const [highlightCaption, setHighlightCaption] = useState("");
-  const [highlightDrafts, setHighlightDrafts] = useState({});
-  const [highlightUploading, setHighlightUploading] = useState(false);
-  const [highlightProgress, setHighlightProgress] = useState(0);
-  const [highlightMessage, setHighlightMessage] = useState("");
-  const [highlightError, setHighlightError] = useState("");
-  const [videoForm, setVideoForm] = useState({ url: "", title: "" });
-  const [videoError, setVideoError] = useState("");
 
   useEffect(() => {
-    const unsubscribePhotos = onSnapshot(
+    const unsubscribe = onSnapshot(
       query(collection(db, "gallery"), orderBy("createdAt", "desc")),
       (snap) => setPhotos(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))),
-      (err) => console.error("Gallery listener failed:", err),
-    );
-
-    const unsubscribeServiceContent = onSnapshot(
-      collection(db, "serviceContent"),
-      (snap) => {
-        const next = {};
-        snap.docs.forEach((docSnap) => {
-          next[docSnap.id] = { id: docSnap.id, ...docSnap.data() };
-        });
-        setServiceContent(next);
+      (err) => {
+        console.error("Gallery listener failed:", err);
+        setError("Could not load gallery assets.");
       },
-      (err) => console.error("Service content listener failed:", err),
     );
 
-    const unsubscribeHighlights = onSnapshot(
-      query(collection(db, "homeHighlights"), orderBy("order", "asc")),
-      (snap) => setHighlights(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))),
-      (err) => console.error("Home highlights listener failed:", err),
-    );
-
-    const unsubscribeVideos = onSnapshot(
-      query(collection(db, "homeVideos"), orderBy("order", "asc")),
-      (snap) => setVideos(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))),
-      (err) => console.error("Home videos listener failed:", err),
-    );
-
-    return () => {
-      unsubscribePhotos();
-      unsubscribeServiceContent();
-      unsubscribeHighlights();
-      unsubscribeVideos();
-    };
+    return unsubscribe;
   }, []);
 
-  const selectedCategoryLabel = categoryLabel(selectedCategory);
+  const selectedAlbumLabel = categoryLabel(selectedAlbum);
   const visiblePhotos = useMemo(
-    () => photos.filter((photo) => photo.category === selectedCategory || photo.serviceType === selectedCategory),
-    [photos, selectedCategory],
+    () => photos.filter((photo) => photo.category === selectedAlbum || photo.serviceType === selectedAlbum),
+    [photos, selectedAlbum],
   );
 
-  useEffect(() => {
-    const service = SERVICES.find((item) => item.id === selectedServiceId);
-    const saved = serviceContent[selectedServiceId] || {};
-    setServiceForm({
-      photoUrl: saved.photoUrl || saved.imageUrl || service?.image || "",
-      description: saved.description || service?.summary || "",
-    });
-  }, [selectedServiceId, serviceContent]);
-
   const uploadFiles = async (files) => {
-    if (!selectedCategory) {
-      setError("Select a service category before uploading photos.");
+    if (!selectedAlbum) {
+      setError("Choose an album before uploading photos.");
       return;
     }
 
@@ -152,11 +87,11 @@ export default function Gallery() {
         };
         const { compressedFile, uploaded } = await compressAndUploadImage(file, updateStatus);
         await addDoc(collection(db, "gallery"), {
-          albumId: selectedCategory,
-          albumName: selectedCategoryLabel,
-          category: selectedCategory,
-          serviceType: selectedCategory,
-          description: describePhoto(file.name, selectedCategory),
+          albumId: selectedAlbum,
+          albumName: selectedAlbumLabel,
+          category: selectedAlbum,
+          serviceType: selectedAlbum,
+          description: describePhoto(file.name, selectedAlbum),
           fileName: file.name,
           imageUrl: uploaded.url,
           url: uploaded.url,
@@ -178,7 +113,7 @@ export default function Gallery() {
         setProgress(Math.round((done / fileList.length) * 100));
       }
 
-      setMessage(`${done} photo${done === 1 ? "" : "s"} uploaded to ${selectedCategoryLabel}.`);
+      setMessage(`${done} photo${done === 1 ? "" : "s"} uploaded to ${selectedAlbumLabel}.`);
     } catch (err) {
       console.error("Gallery upload failed:", err);
       setError(err.message || "Upload failed.");
@@ -219,164 +154,18 @@ export default function Gallery() {
     await deleteDoc(doc(db, "gallery", photo.id));
   };
 
-  const uploadServicePhoto = async (file) => {
-    if (!file || !selectedServiceId) return;
-    setServicePhotoUploading(true);
-    setError("");
-    try {
-      const { compressedFile, uploaded } = await compressAndUploadImage(file);
-      const photoUrl = uploaded.url;
-      setServiceForm((prev) => ({ ...prev, photoUrl }));
-      await setDoc(doc(db, "serviceContent", selectedServiceId), {
-        serviceId: selectedServiceId,
-        photoUrl,
-        imageUrl: photoUrl,
-        thumbUrl: uploaded.thumb?.url || uploaded.medium?.url || uploaded.url,
-        originalSize: file.size,
-        compressedSize: compressedFile.size,
-        updatedAt: serverTimestamp(),
-        updatedBy: auth.currentUser?.uid || "admin",
-      }, { merge: true });
-      setMessage("Service photo updated.");
-    } catch (err) {
-      console.error("Service photo upload failed:", err);
-      setError(err.message || "Service photo upload failed.");
-    } finally {
-      setServicePhotoUploading(false);
-    }
-  };
-
-  const saveServiceContent = async (event) => {
-    event.preventDefault();
-    if (!selectedServiceId) return;
-    await setDoc(doc(db, "serviceContent", selectedServiceId), {
-      serviceId: selectedServiceId,
-      photoUrl: serviceForm.photoUrl,
-      imageUrl: serviceForm.photoUrl,
-      description: serviceForm.description,
-      updatedAt: serverTimestamp(),
-      updatedBy: auth.currentUser?.uid || "admin",
-    }, { merge: true });
-    setMessage("Service detail content saved.");
-  };
-
-  const uploadHighlightFiles = async (files) => {
-    const fileList = Array.from(files || []).filter((file) => file.type.startsWith("image/"));
-    if (fileList.length === 0) {
-      setHighlightError("Choose image files for the home highlight gallery.");
-      return;
-    }
-
-    setHighlightUploading(true);
-    setHighlightProgress(0);
-    setHighlightError("");
-    setHighlightMessage("");
-    let done = 0;
-
-    try {
-      for (const [index, file] of fileList.entries()) {
-        const { compressedFile, uploaded } = await compressAndUploadImage(file);
-        await addDoc(collection(db, "homeHighlights"), {
-          caption: highlightCaption.trim() || describePhoto(file.name, "wedding"),
-          fileName: file.name,
-          imageUrl: uploaded.url,
-          thumbUrl: uploaded.thumb?.url || uploaded.medium?.url || uploaded.url,
-          deleteHash: uploaded.delete_hash || "",
-          originalSize: file.size,
-          compressedSize: compressedFile.size,
-          order: Date.now() + index,
-          active: true,
-          uploadedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          uploadedBy: auth.currentUser?.uid || "admin",
-        });
-        done += 1;
-        setHighlightProgress(Math.round((done / fileList.length) * 100));
-      }
-      setHighlightCaption("");
-      setHighlightMessage(`${done} highlight photo${done === 1 ? "" : "s"} uploaded.`);
-    } catch (err) {
-      console.error("Highlight upload failed:", err);
-      setHighlightError(err.message || "Highlight upload failed.");
-    } finally {
-      setHighlightUploading(false);
-      setHighlightProgress(0);
-    }
-  };
-
-  const saveHighlightCaption = async (photo) => {
-    const caption = highlightDrafts[photo.id] ?? photo.caption ?? "";
-    await updateDoc(doc(db, "homeHighlights", photo.id), {
-      caption,
-      updatedAt: serverTimestamp(),
-    });
-    setHighlightDrafts((prev) => {
-      const next = { ...prev };
-      delete next[photo.id];
-      return next;
-    });
-  };
-
-  const moveHighlight = async (index, direction) => {
-    const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= highlights.length) return;
-    const current = highlights[index];
-    const target = highlights[nextIndex];
-    await Promise.all([
-      updateDoc(doc(db, "homeHighlights", current.id), { order: target.order ?? nextIndex, updatedAt: serverTimestamp() }),
-      updateDoc(doc(db, "homeHighlights", target.id), { order: current.order ?? index, updatedAt: serverTimestamp() }),
-    ]);
-  };
-
-  const deleteHighlight = async (photo) => {
-    if (!window.confirm("Remove this home highlight photo?")) return;
-    await deleteDoc(doc(db, "homeHighlights", photo.id));
-  };
-
-  const saveVideo = async (event) => {
-    event.preventDefault();
-    setVideoError("");
-    const parsed = toEmbeddableVideo(videoForm.url);
-    if (!parsed) {
-      setVideoError("Paste a valid YouTube or Vimeo video link.");
-      return;
-    }
-
-    await addDoc(collection(db, "homeVideos"), {
-      title: videoForm.title.trim() || "Snaplica video",
-      url: videoForm.url.trim(),
-      embedUrl: parsed.embedUrl,
-      provider: parsed.provider,
-      order: Date.now(),
-      active: true,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      createdBy: auth.currentUser?.uid || "admin",
-    });
-    setVideoForm({ url: "", title: "" });
-  };
-
-  const deleteVideo = async (video) => {
-    if (!window.confirm("Remove this home page video?")) return;
-    await deleteDoc(doc(db, "homeVideos", video.id));
-  };
-
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white md:text-3xl">Gallery Assets</h1>
-          <p className="mt-1 text-xs text-gray-500">Choose a service category, upload compressed photos, and manage public service visuals.</p>
+          <p className="mt-1 text-xs text-gray-500">Upload compressed photos into fixed service albums and control public portfolio visibility.</p>
         </div>
-        <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="min-w-[220px] rounded-[8px] border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none focus:border-brand-gold">
-          {CATEGORY_OPTIONS.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
-        </select>
         <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black transition-colors hover:bg-amber-500 disabled:opacity-60">
           {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           Upload Images
         </button>
-        <input ref={fileInputRef} type="file" accept="image/*" multiple disabled={uploading} onChange={(e) => { uploadFiles(e.target.files); e.target.value = ""; }} className="hidden" />
+        <input ref={fileInputRef} type="file" accept="image/*" multiple disabled={uploading} onChange={(event) => { uploadFiles(event.target.files); event.target.value = ""; }} className="hidden" />
       </div>
 
       {(message || error || uploading) && (
@@ -398,18 +187,18 @@ export default function Gallery() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
         <aside className="rounded-[8px] border border-white/10 bg-brand-card p-4">
-          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-400">Service Categories</h2>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-400">Albums</h2>
           <div className="space-y-2">
-            {CATEGORY_OPTIONS.map((category) => {
-              const count = photos.filter((photo) => photo.category === category.id || photo.serviceType === category.id).length;
+            {ALBUM_OPTIONS.map((album) => {
+              const count = photos.filter((photo) => photo.category === album.id || photo.serviceType === album.id).length;
               return (
                 <button
-                  key={category.id}
+                  key={album.id}
                   type="button"
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-[8px] border p-3 text-left transition-colors ${selectedCategory === category.id ? "border-brand-gold bg-brand-gold/10" : "border-white/10 bg-black/20 hover:border-white/20"}`}
+                  onClick={() => setSelectedAlbum(album.id)}
+                  className={`flex w-full items-center justify-between gap-3 rounded-[8px] border p-3 text-left transition-colors ${selectedAlbum === album.id ? "border-brand-gold bg-brand-gold/10" : "border-white/10 bg-black/20 hover:border-white/20"}`}
                 >
-                  <span className="truncate text-sm font-bold text-white">{category.label}</span>
+                  <span className="truncate text-sm font-bold text-white">{album.label}</span>
                   <span className="text-[11px] text-gray-500">{count}</span>
                 </button>
               );
@@ -420,18 +209,18 @@ export default function Gallery() {
         <main className="rounded-[8px] border border-white/10 bg-brand-card p-5">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-white">{selectedCategoryLabel}</h2>
-              <p className="mt-1 text-xs text-gray-500">Drag images here or use Upload Images. No album setup required.</p>
+              <h2 className="text-xl font-bold text-white">{selectedAlbumLabel}</h2>
+              <p className="mt-1 text-xs text-gray-500">Drag images here or use Upload Images. Photos keep this album as their Firestore category.</p>
             </div>
             <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-gray-500">{visiblePhotos.length} images</span>
           </div>
 
           {visiblePhotos.length === 0 && (
-            <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); uploadFiles(event.dataTransfer.files); }} className="flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/15 bg-black/20 p-8 text-center">
+            <label onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); uploadFiles(event.dataTransfer.files); }} className="mb-5 flex min-h-[320px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/15 bg-black/20 p-8 text-center">
               <Upload className="mb-4 h-10 w-10 text-brand-gold" />
-              <p className="text-sm font-bold text-white">Upload images to {selectedCategoryLabel}</p>
+              <p className="text-sm font-bold text-white">Upload images to {selectedAlbumLabel}</p>
               <p className="mt-2 max-w-md text-xs leading-6 text-gray-500">Images are compressed close to 300KB before uploading to ImgBB.</p>
-              <input type="file" accept="image/*" multiple disabled={uploading} onChange={(e) => { uploadFiles(e.target.files); e.target.value = ""; }} className="hidden" />
+              <input type="file" accept="image/*" multiple disabled={uploading} onChange={(event) => { uploadFiles(event.target.files); event.target.value = ""; }} className="hidden" />
             </label>
           )}
 
@@ -446,11 +235,11 @@ export default function Gallery() {
                     </span>
                     <span className="text-[10px] uppercase tracking-wider text-gray-600">{categoryLabel(photo.category)}</span>
                   </div>
-                  <textarea value={draftDescriptions[photo.id] ?? photo.description ?? ""} onChange={(e) => setDraftDescriptions((prev) => ({ ...prev, [photo.id]: e.target.value }))} onBlur={() => saveDescription(photo)} rows={3} className={`${inputClass} resize-none text-xs leading-5`} />
+                  <textarea value={draftDescriptions[photo.id] ?? photo.description ?? ""} onChange={(event) => setDraftDescriptions((prev) => ({ ...prev, [photo.id]: event.target.value }))} onBlur={() => saveDescription(photo)} rows={3} className={`${inputClass} resize-none text-xs leading-5`} />
                   <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => regenerateDescription(photo)} className={iconAction("#60a5fa")} title="Regenerate description"><RefreshCcw className="h-4 w-4" /></button>
-                    <button onClick={() => togglePublic(photo)} className={iconAction(photo.showInPublic ? "#f59e0b" : "#22c55e")} title={photo.showInPublic ? "Hide image" : "Show image"}>{photo.showInPublic ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
-                    <button onClick={() => deletePhoto(photo)} className={iconAction("#ef4444")} title="Delete image"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => regenerateDescription(photo)} style={iconAction("#60a5fa")} title="Regenerate description"><RefreshCcw className="h-4 w-4" /></button>
+                    <button onClick={() => togglePublic(photo)} style={iconAction(photo.showInPublic ? "#f59e0b" : "#22c55e")} title={photo.showInPublic ? "Hide image" : "Show image"}>{photo.showInPublic ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+                    <button onClick={() => deletePhoto(photo)} style={iconAction("#ef4444")} title="Delete image"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
               </article>
@@ -458,131 +247,18 @@ export default function Gallery() {
           </div>
         </main>
       </div>
-
-      <section className="rounded-[8px] border border-white/10 bg-brand-card p-5">
-        <div className="mb-5">
-          <h2 className="text-xl font-bold text-white">Service Detail Content</h2>
-          <p className="mt-1 text-xs text-gray-500">One representative photo and one description for each public service detail page.</p>
-        </div>
-        <form onSubmit={saveServiceContent} className="grid gap-5 lg:grid-cols-[320px_1fr]">
-          <div className="space-y-4">
-            <Field label="Service">
-              <select value={selectedServiceId} onChange={(e) => setSelectedServiceId(e.target.value)} className={inputClass}>
-                {CATEGORY_OPTIONS.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
-              </select>
-            </Field>
-            <div className="overflow-hidden rounded-[8px] bg-black/30">
-              <img src={serviceForm.photoUrl} alt={categoryLabel(selectedServiceId)} className="aspect-[4/3] w-full object-cover" />
-            </div>
-            <button type="button" onClick={() => servicePhotoInputRef.current?.click()} disabled={servicePhotoUploading} className="inline-flex w-full items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-4 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500 disabled:opacity-50">
-              {servicePhotoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              Upload Service Photo
-            </button>
-            <input ref={servicePhotoInputRef} type="file" accept="image/*" disabled={servicePhotoUploading} onChange={(e) => { uploadServicePhoto(e.target.files?.[0]); e.target.value = ""; }} className="hidden" />
-          </div>
-          <div className="space-y-4">
-            <Field label="Description">
-              <textarea value={serviceForm.description} onChange={(e) => setServiceForm((prev) => ({ ...prev, description: e.target.value }))} rows={10} className={`${inputClass} resize-none leading-6`} />
-            </Field>
-            <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500">
-              <Save className="h-4 w-4" />
-              Save Service Detail
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section className="rounded-[8px] border border-white/10 bg-brand-card p-5">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-white">Home Highlight Gallery</h2>
-            <p className="mt-1 text-xs text-gray-500">Curated photos shown directly below the public Home hero.</p>
-          </div>
-          <button type="button" disabled={highlightUploading} onClick={() => highlightInputRef.current?.click()} className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500 disabled:opacity-50">
-            {highlightUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Upload Highlights
-          </button>
-          <input ref={highlightInputRef} type="file" accept="image/*" multiple disabled={highlightUploading} onChange={(e) => uploadHighlightFiles(e.target.files)} onClick={(e) => { e.currentTarget.value = ""; }} className="hidden" />
-        </div>
-
-        <div className="mb-5 grid gap-3 md:grid-cols-[1fr_auto]">
-          <input value={highlightCaption} onChange={(e) => setHighlightCaption(e.target.value)} className={inputClass} placeholder="Caption for the next uploaded highlight photos" />
-          <div className="rounded-[8px] border border-white/10 bg-black/30 px-4 py-3 text-xs text-gray-400">
-            {highlightUploading ? `Compressing/uploading (${highlightProgress}%)` : highlightError || highlightMessage || `${highlights.length} highlights live`}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {highlights.length === 0 && <div className="rounded-[8px] border border-dashed border-white/10 p-8 text-center text-xs text-gray-600 md:col-span-2 xl:col-span-4">No home highlights uploaded yet.</div>}
-          {highlights.map((photo, index) => (
-            <article key={photo.id} className="overflow-hidden rounded-[8px] border border-brand-gold/25 bg-black/25">
-              <img src={photo.thumbUrl || photo.imageUrl} alt={photo.caption || photo.fileName} className="aspect-[4/3] w-full object-cover" />
-              <div className="space-y-3 p-4">
-                <textarea value={highlightDrafts[photo.id] ?? photo.caption ?? ""} onChange={(e) => setHighlightDrafts((prev) => ({ ...prev, [photo.id]: e.target.value }))} onBlur={() => saveHighlightCaption(photo)} rows={2} className={`${inputClass} resize-none text-xs leading-5`} placeholder="Highlight caption" />
-                <div className="grid grid-cols-4 gap-2">
-                  <button onClick={() => moveHighlight(index, -1)} disabled={index === 0} className={iconAction("#c9a227")} title="Move up"><ArrowUp className="h-4 w-4" /></button>
-                  <button onClick={() => moveHighlight(index, 1)} disabled={index === highlights.length - 1} className={iconAction("#c9a227")} title="Move down"><ArrowDown className="h-4 w-4" /></button>
-                  <button onClick={() => updateDoc(doc(db, "homeHighlights", photo.id), { active: !photo.active, updatedAt: serverTimestamp() })} className={iconAction(photo.active ? "#f59e0b" : "#22c55e")} title={photo.active ? "Hide" : "Show"}>{photo.active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
-                  <button onClick={() => deleteHighlight(photo)} className={iconAction("#ef4444")} title="Delete highlight"><Trash2 className="h-4 w-4" /></button>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-[8px] border border-white/10 bg-brand-card p-5">
-        <div className="mb-5">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-white"><Film className="h-5 w-5 text-brand-gold" />Home Video Section</h2>
-          <p className="mt-1 text-xs text-gray-500">Paste embeddable YouTube or Vimeo links. No video files are uploaded.</p>
-        </div>
-
-        <form onSubmit={saveVideo} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-          <input value={videoForm.url} onChange={(e) => setVideoForm((prev) => ({ ...prev, url: e.target.value }))} className={inputClass} placeholder="https://www.youtube.com/watch?v=..." />
-          <input value={videoForm.title} onChange={(e) => setVideoForm((prev) => ({ ...prev, title: e.target.value }))} className={inputClass} placeholder="Optional title" />
-          <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-[8px] bg-brand-gold px-5 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-amber-500"><LinkIcon className="h-4 w-4" />Save Video</button>
-        </form>
-        {videoError && <p className="mt-3 text-xs text-red-300">{videoError}</p>}
-
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {videos.length === 0 && <div className="rounded-[8px] border border-dashed border-white/10 p-8 text-center text-xs text-gray-600 md:col-span-2 xl:col-span-3">No home videos saved yet.</div>}
-          {videos.map((video) => (
-            <article key={video.id} className="overflow-hidden rounded-[8px] border border-white/10 bg-black/25">
-              <iframe src={video.embedUrl} title={video.title} className="aspect-video w-full bg-black" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-white">{video.title}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-wider text-gray-600">{video.provider}</p>
-                </div>
-                <button onClick={() => deleteVideo(video)} className={iconAction("#ef4444")} title="Delete video"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
 
-const Field = ({ label, children }) => (
-  <label className="block">
-    <span className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-gray-500">{label}</span>
-    {children}
-  </label>
-);
-
-const inputClass =
-  "w-full rounded-[8px] border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-brand-gold";
-
-const iconAction = (color) =>
-  ({
-    color,
-    border: `1px solid ${color}33`,
-    background: `${color}14`,
-    borderRadius: 8,
-    padding: "10px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-  });
+const iconAction = (color) => ({
+  color,
+  border: `1px solid ${color}33`,
+  background: `${color}14`,
+  borderRadius: 8,
+  padding: "10px",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+});

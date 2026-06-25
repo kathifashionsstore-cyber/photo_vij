@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SERVICES } from '../data/services';
+
+const serviceKeywords = SERVICES.flatMap((service) => [service.id, service.label, ...(service.keywords || [])]).map((item) => item.toLowerCase());
+const serviceListText = SERVICES.map((service) => service.label).join(", ");
 
 export const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,7 +15,7 @@ export const ChatbotWidget = () => {
   const [suggestedQuestions, setSuggestedQuestions] = useState([
     "Where is the studio?",
     "What services do you offer?",
-    "How do I book सोनू & crew?",
+    "How do I book Sonu & crew?",
     "What is photo delivery time?"
   ]);
   const chatEndRef = useRef(null);
@@ -24,7 +28,7 @@ export const ChatbotWidget = () => {
 
   const knowledgeBase = {
     location: "Snaplica Photography studio is located at Ibrahimpatnam, Vijayawada, Andhra Pradesh, India. You can view our coordinates on the Contact page.",
-    services: "We cover weddings, pre-weddings, birthdays, maternity, baby showers, corporate events, product shoots, model portfolios, drone coverage, reels, and more. Share your event date and venue so Sonu can suggest the right crew setup.",
+    services: `We cover exactly these services: ${serviceListText}. Share your event date and venue so Sonu can suggest the right crew setup.`,
     book: "You can book our dates online. Go to the Book tab, share your event details, and Sonu will contact you to confirm availability and next steps.",
     delivery: "We deliver RAW selection galleries to your Customer Portal within 4 days. Edited cinematic clips and printed albums are fully delivered within 3 to 4 weeks.",
     default: "I'm not sure about that detail. You can call or WhatsApp Sonu directly at 9494387387 or email snaplicaphotography@gmail.com for custom queries."
@@ -44,7 +48,7 @@ export const ChatbotWidget = () => {
 
       if (cleanText.includes("location") || cleanText.includes("where") || cleanText.includes("address") || cleanText.includes("place")) {
         reply = knowledgeBase.location;
-      } else if (cleanText.includes("service") || cleanText.includes("shoot") || cleanText.includes("coverage") || cleanText.includes("crew")) {
+      } else if (cleanText.includes("service") || cleanText.includes("shoot") || cleanText.includes("coverage") || cleanText.includes("crew") || serviceKeywords.some((keyword) => cleanText.includes(keyword))) {
         reply = knowledgeBase.services;
       } else if (cleanText.includes("book") || cleanText.includes("schedule") || cleanText.includes("hire") || cleanText.includes("reserve")) {
         reply = knowledgeBase.book;

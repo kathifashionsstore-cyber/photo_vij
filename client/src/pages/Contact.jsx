@@ -4,6 +4,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import HeroSection from '../components/HeroSection';
 import SEOHead from '../components/SEOHead';
+import { SERVICES } from '../data/services';
 
 export const Contact = () => {
   const [formData, setFormData] = useState({
@@ -194,12 +195,9 @@ export const Contact = () => {
                     onChange={handleChange}
                     className="w-full bg-black/90 border border-white/5 rounded-xl px-4 py-3 text-xs outline-none text-white focus:border-brand-gold transition-colors font-sans"
                   >
-                    <option value="wedding">Wedding Shoot</option>
-                    <option value="pre-wedding">Pre-Wedding Cinematic</option>
-                    <option value="birthday">Birthday Ceremony</option>
-                    <option value="corporate">Corporate Event</option>
-                    <option value="product">Product Commercial</option>
-                    <option value="other">Other / Custom</option>
+                    {SERVICES.map((service) => (
+                      <option key={service.id} value={service.id}>{service.label}</option>
+                    ))}
                   </select>
                 </div>
 

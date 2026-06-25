@@ -49,6 +49,11 @@ match /homeHighlights/{highlightId} {
   allow write: if isSignedIn();
 }
 
+match /services/{serviceId} {
+  allow read: if true;
+  allow write: if isSignedIn();
+}
+
 match /homeVideos/{videoId} {
   allow read: if true;
   allow write: if isSignedIn();

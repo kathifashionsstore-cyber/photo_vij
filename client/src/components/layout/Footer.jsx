@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Instagram, Youtube, Facebook } from 'lucide-react';
+import { SERVICES } from '../../data/services';
 
 export const Footer = () => {
   return (
@@ -46,11 +47,9 @@ export const Footer = () => {
         <div>
           <h4 className="text-white font-serif text-lg mb-4">Our Services</h4>
           <ul className="space-y-2 text-sm font-light">
-            <li><Link to="/services" className="hover:text-brand-gold transition-colors">Wedding Photography</Link></li>
-            <li><Link to="/services" className="hover:text-brand-gold transition-colors">Pre-Wedding Shoots</Link></li>
-            <li><Link to="/services" className="hover:text-brand-gold transition-colors">Candid & Cinematic Shoots</Link></li>
-            <li><Link to="/services" className="hover:text-brand-gold transition-colors">Birthday & Event Coverage</Link></li>
-            <li><Link to="/services" className="hover:text-brand-gold transition-colors">Corporate Portraits & Portfolios</Link></li>
+            {SERVICES.map((service) => (
+              <li key={service.id}><Link to={`/services/${service.id}`} className="hover:text-brand-gold transition-colors">{service.label}</Link></li>
+            ))}
           </ul>
         </div>
 

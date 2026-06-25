@@ -44,15 +44,15 @@ const HERO_DEFAULTS = {
   },
   services: {
     heading: "Photography Services for Every Occasion",
-    subheading: "Wedding, pre-wedding, birthday, corporate, product, portrait, and cinematic coverage.",
+    subheading: "Engagement, wedding, maternity, birthday, corporate, graduation, anniversary, retirement, and jewellery ad coverage.",
     cta1Text: "Explore Services",
     cta1Url: "/services",
     cta2Text: "Book Now",
     cta2Url: "/booking",
   },
   portfolio: {
-    heading: "Our Work Speaks for Itself",
-    subheading: "Browse candid, traditional, cinematic, and event stories crafted by Snaplica.",
+    heading: "Portfolio",
+    subheading: "Browse public photos from celebrations, ceremonies, campaigns, and family milestones crafted by Snaplica.",
     cta1Text: "Book Similar Shoot",
     cta1Url: "/booking",
     cta2Text: "Contact Studio",

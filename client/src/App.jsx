@@ -42,6 +42,8 @@ const AdminBookings    = lazy(() => import("./admin/pages/Bookings"));      // A
 const AdminTeams       = lazy(() => import("./admin/pages/Teams"));
 const AdminFinance     = lazy(() => import("./admin/pages/Finance"));
 const AdminGallery     = lazy(() => import("./admin/pages/Gallery"));
+const AdminHighlights  = lazy(() => import("./admin/pages/Highlights"));
+const AdminServices    = lazy(() => import("./admin/pages/ServicesManager"));
 const AdminAnnounce    = lazy(() => import("./admin/pages/Announcements"));
 const AdminBanners     = lazy(() => import("./admin/pages/Banners"));
 const AdminAnalytics   = lazy(() => import("./admin/pages/Analytics"));
@@ -159,6 +161,8 @@ function AppContent() {
           <Route path="teams"         element={<AdminTeams />} />
           <Route path="finance"       element={<AdminFinance />} />
           <Route path="gallery"       element={<AdminGallery />} />
+          <Route path="highlights"    element={<AdminHighlights />} />
+          <Route path="services"      element={<AdminServices />} />
           <Route path="announcements" element={<AdminAnnounce />} />
           <Route path="banners"       element={<AdminBanners />} />
           <Route path="analytics"     element={<AdminAnalytics />} />

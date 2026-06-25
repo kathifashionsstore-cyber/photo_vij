@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Bot, Save, CheckCircle } from 'lucide-react';
+import { SERVICES } from '../../data/services';
+
+const serviceListText = SERVICES.map((service) => service.label).join(", ");
 
 export const ChatbotKnowledge = () => {
   const [kb, setKb] = useState({
     location: "Snaplica Photography studio is located at Ibrahimpatnam, Vijayawada, Andhra Pradesh, India. You can view our coordinates on the Contact page.",
-    services: "We cover weddings, events, birthdays, pre-weddings, corporate shoots, product shoots, portraits, drone coverage, and reels. Ask clients for date, venue, and coverage needs before suggesting a crew setup.",
+    services: `We cover exactly these services: ${serviceListText}. Ask clients for date, venue, and coverage needs before suggesting a crew setup.`,
     delivery: "We deliver RAW selection galleries to your Customer Portal within 4 days. Edited cinematic clips and printed albums are fully delivered within 3 to 4 weeks."
   });
   const [success, setSuccess] = useState(false);
