@@ -1,6 +1,8 @@
 User-agent: *
+
 Allow: /
+
 Disallow: /admin
 Disallow: /portal
 
-Sitemap: https://snaplicaphoto.com/sitemap.xml
+Sitemap: https://snaplicaphotography.com/sitemap.xml
