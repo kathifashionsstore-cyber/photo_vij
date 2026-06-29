@@ -7,3 +7,44 @@
   VITE v5.4.21  ready in 2782 ms
 
   ➜  Local:   http://127.0.0.1:5174/
+9:41:08 am [vite] page reload src/utils/videoLinks.js
+9:41:27 am [vite] page reload src/animations/variants.js
+9:42:08 am [vite] page reload src/components/LoadingScreen.jsx
+9:42:24 am [vite] hmr update /src/context/AuthContext.jsx, /src/index.css
+9:42:25 am [vite] page reload src/context/TenantContext.jsx
+9:42:26 am [vite] page reload src/context/ThemeContext.jsx
+9:42:36 am [vite] page reload src/hooks/useFirestore.js
+9:42:38 am [vite] hmr update /src/App.jsx, /src/index.css
+10:54:35 am [vite] page reload index.html
+11:58:14 am [vite] hmr update /src/App.jsx, /src/index.css
+11:58:14 am [vite] hmr update /src/context/AuthContext.jsx, /src/index.css
+
+PWA v1.3.0
+mode      generateSW
+precache  2 entries (0.12 KiB)
+files generated
+  dev-dist/sw.js
+  dev-dist/workbox-7e5eb42b.js
+3:10:20 pm [vite] hmr update /src/pages/Home.jsx, /src/index.css
+3:10:20 pm [vite] page reload src/utils/videoLinks.js
+3:10:20 pm [vite] page reload src/portal/CustomerDashboard.jsx
+3:10:20 pm [vite] page reload src/animations/variants.js
+3:10:20 pm [vite] hmr update /src/components/BookingForm.jsx, /src/index.css
+3:10:20 pm [vite] hmr update /src/context/AuthContext.jsx, /src/index.css
+3:10:20 pm [vite] hmr update /src/index.css, /src/components/layout/Footer.jsx, /src/chatbot/ChatbotWidget.jsx, /src/components/BookingForm.jsx, /src/admin/pages/Bookings.jsx, /src/components/admin/AssignTeamModal.jsx, /src/admin/pages/Teams.jsx, /src/admin/components/Receipt.jsx, /src/admin/pages/Gallery.jsx
+3:10:20 pm [vite] page reload src/hooks/useFirestore.js
+3:10:20 pm [vite] page reload src/components/WhatWeDoSection.jsx
+3:10:20 pm [vite] page reload src/components/LoadingScreen.jsx
+3:10:20 pm [vite] hmr update /src/components/GoogleDriveNotice.jsx, /src/index.css
+3:10:20 pm [vite] page reload src/context/TenantContext.jsx
+3:10:20 pm [vite] page reload src/context/ThemeContext.jsx
+3:10:20 pm [vite] page reload src/hooks/useServices.js
+3:10:20 pm [vite] hmr update /src/App.jsx, /src/index.css, /src/admin/pages/Settings.jsx
+3:15:51 pm [vite] page reload index.html
+3:28:46 pm [vite] page reload public/index.html
+3:28:46 pm [vite] page reload index.html
+3:28:53 pm [vite] page reload public/index.html
+3:35:36 pm [vite] vite.config.js changed, restarting server...
+3:35:36 pm [vite] server restarted.
+3:40:19 pm [vite] page reload index.html
+3:40:19 pm [vite] page reload public/index.html
